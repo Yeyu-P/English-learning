@@ -45,7 +45,7 @@ async function captureAndAnalyze() {
 
   const {
     apiKey,
-    provider          = 'gemini',
+    provider          = 'openrouter',
     model,
     screenshotFormat  = 'jpeg',
     screenshotQuality = 85,
@@ -72,14 +72,19 @@ async function captureAndAnalyze() {
     });
   } catch (err) {
     await updateRecord(recordId, { loading: false, error: '截图失败: ' + err.message });
+    showPageToast(tab.id, '截图失败', 'error');
     return;
   }
+
+  // Immediate feedback: screenshot captured, now analyzing
+  showPageToast(tab.id, 'AI 分析中…', 'loading');
 
   let analysis = null;
   let error = null;
 
   if (!apiKey) {
     error = '未设置 API Key，请点击插件图标进行设置';
+    showPageToast(tab.id, '未设置 API Key', 'error');
   } else {
     try {
       const prompt = buildPrompt(analysisLanguage, analysisDetail);
@@ -90,8 +95,11 @@ async function captureAndAnalyze() {
       } else {
         analysis = await analyzeWithClaude(screenshotUrl, apiKey, model || 'claude-sonnet-4-6', prompt);
       }
+      const vocabCount = analysis?.vocabulary?.length || 0;
+      showPageToast(tab.id, '分析完成', 'success', vocabCount);
     } catch (err) {
       error = '分析失败: ' + err.message;
+      showPageToast(tab.id, '分析失败，请检查 API Key', 'error');
     }
   }
 
@@ -104,6 +112,85 @@ async function captureAndAnalyze() {
       await chrome.storage.local.set({ records: latest.slice(0, maxRecords) });
     }
   }
+}
+
+// ── Page toast (injected into the current tab) ─────────────────
+
+function showPageToast(tabId, msg, type, vocabCount = 0) {
+  chrome.scripting.executeScript({
+    target: { tabId },
+    func: (message, toastType, count) => {
+      const ID = '__el-toast__';
+      const STYLE_ID = '__el-toast-style__';
+
+      if (!document.getElementById(STYLE_ID)) {
+        const s = document.createElement('style');
+        s.id = STYLE_ID;
+        s.textContent = `
+          @keyframes __el_spin { to { transform: rotate(360deg); } }
+          @keyframes __el_in   { from { opacity: 0; transform: translateY(-10px); }
+                                  to   { opacity: 1; transform: translateY(0); } }
+        `;
+        document.head.appendChild(s);
+      }
+
+      const existing = document.getElementById(ID);
+      if (existing) existing.remove();
+
+      const el = document.createElement('div');
+      el.id = ID;
+
+      const BG     = { loading: '#1e293b', success: '#052e16', error: '#450a0a' };
+      const BORDER = { loading: '#475569', success: '#16a34a', error: '#dc2626' };
+
+      Object.assign(el.style, {
+        position:      'fixed',
+        top:           '20px',
+        right:         '20px',
+        zIndex:        '2147483647',
+        padding:       '10px 15px',
+        borderRadius:  '12px',
+        border:        `1px solid ${BORDER[toastType] || BORDER.loading}`,
+        background:    BG[toastType] || BG.loading,
+        color:         '#f1f5f9',
+        fontFamily:    '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+        fontSize:      '13px',
+        display:       'flex',
+        alignItems:    'center',
+        gap:           '9px',
+        boxShadow:     '0 8px 28px rgba(0,0,0,0.45)',
+        animation:     '__el_in 0.22s ease',
+        maxWidth:      '260px',
+        lineHeight:    '1.4',
+        pointerEvents: 'none',
+        userSelect:    'none',
+      });
+
+      let icon = '';
+      if (toastType === 'loading') {
+        icon = `<div style="width:13px;height:13px;border:2px solid #475569;border-top-color:#f59e0b;border-radius:50%;animation:__el_spin 0.75s linear infinite;flex-shrink:0"></div>`;
+      } else if (toastType === 'success') {
+        icon = `<span style="color:#4ade80;font-size:15px;flex-shrink:0;font-weight:700">✓</span>`;
+      } else {
+        icon = `<span style="font-size:14px;flex-shrink:0">⚠</span>`;
+      }
+
+      const label = (toastType === 'success' && count > 0)
+        ? `${message} · <span style="color:#86efac">${count} 个词汇</span>`
+        : message;
+
+      el.innerHTML = `${icon}<span>${label}</span>`;
+      document.documentElement.appendChild(el);
+
+      if (toastType !== 'loading') {
+        setTimeout(() => {
+          Object.assign(el.style, { transition: 'opacity 0.3s, transform 0.3s', opacity: '0', transform: 'translateY(-10px)' });
+          setTimeout(() => el.remove(), 320);
+        }, 3500);
+      }
+    },
+    args: [msg, type, vocabCount],
+  }).catch(() => {});
 }
 
 async function updateRecord(recordId, patch) {
