@@ -27,6 +27,18 @@ document.getElementById('openPanelBtn').addEventListener('click', async () => {
 // ═══════════════════════════════════════════════════════════════
 
 const PROVIDERS = {
+  groq: {
+    label: 'Groq API Key',
+    placeholder: 'gsk_...',
+    tip: `<strong style="color:#94a3b8">完全免费</strong> · 从 <a href="https://console.groq.com/keys" target="_blank">console.groq.com</a> 注册获取（无需绑卡，响应极快）`,
+    models: [
+      { value: 'llama-3.2-90b-vision-preview',  label: 'Llama 3.2 90B Vision（质量更好）' },
+      { value: 'llama-3.2-11b-vision-preview',  label: 'Llama 3.2 11B Vision（速度更快）' },
+    ],
+    defaultModel: 'llama-3.2-90b-vision-preview',
+    validate: (k) => k.startsWith('gsk_'),
+    validateMsg: 'Groq API Key 应以 gsk_ 开头',
+  },
   openrouter: {
     label: 'OpenRouter API Key',
     placeholder: 'sk-or-v1-...',
@@ -69,22 +81,20 @@ const PROVIDERS = {
   },
 };
 
-let currentProvider = 'openrouter';
+let currentProvider = 'groq';
 
-const apiKeyInput  = document.getElementById('apiKey');
-const apiKeyLabel  = document.getElementById('apiKeyLabel');
-const modelSelect  = document.getElementById('model');
-const tipBox       = document.getElementById('tipBox');
-const toggleEye    = document.getElementById('toggleEye');
+const apiKeyInput    = document.getElementById('apiKey');
+const apiKeyLabel    = document.getElementById('apiKeyLabel');
+const modelSelect    = document.getElementById('model');
+const tipBox         = document.getElementById('tipBox');
+const toggleEye      = document.getElementById('toggleEye');
+const providerSelect = document.getElementById('providerSelect');
 
 function applyProvider(p) {
   currentProvider = p;
   const cfg = PROVIDERS[p];
 
-  document.querySelectorAll('.provider-tab').forEach((t) => {
-    t.classList.toggle('active', t.dataset.provider === p);
-  });
-
+  providerSelect.value = p;
   apiKeyLabel.textContent = cfg.label;
   apiKeyInput.placeholder = cfg.placeholder;
   tipBox.innerHTML = cfg.tip;
@@ -99,13 +109,11 @@ function applyProvider(p) {
   modelSelect.value = cfg.defaultModel;
 }
 
-applyProvider('openrouter');
+applyProvider('groq');
 
-document.querySelectorAll('.provider-tab').forEach((tab) => {
-  tab.addEventListener('click', () => {
-    apiKeyInput.value = '';
-    applyProvider(tab.dataset.provider);
-  });
+providerSelect.addEventListener('change', () => {
+  apiKeyInput.value = '';
+  applyProvider(providerSelect.value);
 });
 
 toggleEye.addEventListener('click', () => {

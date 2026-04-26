@@ -13,7 +13,9 @@
   "host_permissions": [
     "https://api.anthropic.com/*",
     "https://generativelanguage.googleapis.com/*",
-    "https://openrouter.ai/*"
+    "https://openrouter.ai/*",
+    "https://api.groq.com/*",
+    "https://api.groq.com/*"
   ],
   "background": {
     "service_worker": "background.js"

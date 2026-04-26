@@ -383,18 +383,13 @@
   <!-- ── Tab: API ── -->
   <div class="panel active" id="tab-api">
     <div class="field">
-      <div class="field-label">AI 服务</div>
-      <div class="provider-tabs">
-        <button class="provider-tab active" data-provider="openrouter">
-          OpenRouter <span class="badge-free">免费</span>
-        </button>
-        <button class="provider-tab" data-provider="gemini">
-          Gemini
-        </button>
-        <button class="provider-tab" data-provider="claude">
-          Claude
-        </button>
-      </div>
+      <label for="providerSelect">AI 服务</label>
+      <select id="providerSelect">
+        <option value="groq">⚡ Groq（免费 · 速度最快）</option>
+        <option value="openrouter">🔀 OpenRouter（部分模型免费）</option>
+        <option value="gemini">🔷 Google Gemini（部分地区免费）</option>
+        <option value="claude">🟣 Anthropic Claude（付费）</option>
+      </select>
     </div>
 
     <div class="tip-box" id="tipBox"></div>
