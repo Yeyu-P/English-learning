@@ -1,0 +1,34 @@
+{
+  "manifest_version": 3,
+  "name": "美剧英语助手",
+  "version": "1.0",
+  "description": "看美剧时按快捷键截图，自动分析英语台词和词汇",
+  "permissions": [
+    "activeTab",
+    "storage",
+    "tabs",
+    "sidePanel"
+  ],
+  "host_permissions": [
+    "https://api.anthropic.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "美剧英语助手 - 设置"
+  },
+  "side_panel": {
+    "default_path": "panel.html"
+  },
+  "commands": {
+    "capture-screenshot": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+E",
+        "mac": "Command+Shift+E"
+      },
+      "description": "截图并分析英语内容"
+    }
+  }
+}
