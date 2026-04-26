@@ -89,7 +89,7 @@ async function captureAndAnalyze() {
     try {
       const prompt = buildPrompt(analysisLanguage, analysisDetail);
       if (provider === 'groq') {
-        analysis = await analyzeWithGroq(screenshotUrl, apiKey, model || 'llama-3.2-90b-vision-preview', prompt);
+        analysis = await analyzeWithGroq(screenshotUrl, apiKey, model || 'meta-llama/llama-4-scout-17b-16e-instruct', prompt);
       } else if (provider === 'gemini') {
         analysis = await analyzeWithGemini(screenshotUrl, apiKey, model || 'gemini-2.0-flash', prompt);
       } else if (provider === 'openrouter') {
