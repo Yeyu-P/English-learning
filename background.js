@@ -85,6 +85,8 @@ async function captureAndAnalyze() {
       const prompt = buildPrompt(analysisLanguage, analysisDetail);
       if (provider === 'gemini') {
         analysis = await analyzeWithGemini(screenshotUrl, apiKey, model || 'gemini-2.0-flash', prompt);
+      } else if (provider === 'openrouter') {
+        analysis = await analyzeWithOpenRouter(screenshotUrl, apiKey, model || 'meta-llama/llama-4-maverick:free', prompt);
       } else {
         analysis = await analyzeWithClaude(screenshotUrl, apiKey, model || 'claude-sonnet-4-6', prompt);
       }
@@ -223,4 +225,40 @@ async function analyzeWithClaude(screenshotUrl, apiKey, model, prompt) {
 
   const data = await resp.json();
   return parseAnalysis(data.content[0].text);
+}
+
+// ── OpenRouter (free vision models) ───────────────────────────
+
+async function analyzeWithOpenRouter(screenshotUrl, apiKey, model, prompt) {
+  const base64   = screenshotUrl.split(',')[1];
+  const mimeType = screenshotUrl.startsWith('data:image/jpeg') ? 'image/jpeg' : 'image/png';
+
+  const resp = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model,
+      messages: [{
+        role: 'user',
+        content: [
+          { type: 'image_url', image_url: { url: `data:${mimeType};base64,${base64}` } },
+          { type: 'text', text: prompt },
+        ],
+      }],
+      max_tokens: 2048,
+    }),
+  });
+
+  if (!resp.ok) {
+    let msg = `HTTP ${resp.status}`;
+    try { msg = (await resp.json()).error?.message || msg; } catch (_) {}
+    throw new Error(msg);
+  }
+
+  const data = await resp.json();
+  const text = data.choices?.[0]?.message?.content || '';
+  return parseAnalysis(text);
 }

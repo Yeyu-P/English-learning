@@ -27,14 +27,28 @@ document.getElementById('openPanelBtn').addEventListener('click', async () => {
 // ═══════════════════════════════════════════════════════════════
 
 const PROVIDERS = {
+  openrouter: {
+    label: 'OpenRouter API Key',
+    placeholder: 'sk-or-v1-...',
+    tip: `<strong style="color:#94a3b8">完全免费</strong> · 从 <a href="https://openrouter.ai/keys" target="_blank">openrouter.ai</a> 注册获取（无需绑卡，国内可用）`,
+    models: [
+      { value: 'meta-llama/llama-4-maverick:free',              label: 'Llama 4 Maverick（免费，推荐）' },
+      { value: 'meta-llama/llama-4-scout:free',                 label: 'Llama 4 Scout（免费）' },
+      { value: 'google/gemini-2.0-flash-exp:free',              label: 'Gemini 2.0 Flash Exp（免费）' },
+      { value: 'microsoft/phi-4-multimodal-instruct:free',      label: 'Phi-4 Multimodal（免费）' },
+    ],
+    defaultModel: 'meta-llama/llama-4-maverick:free',
+    validate: (k) => k.startsWith('sk-or-'),
+    validateMsg: 'OpenRouter API Key 应以 sk-or- 开头',
+  },
   gemini: {
     label: 'Gemini API Key',
     placeholder: 'AIzaSy...',
-    tip: `<strong style="color:#94a3b8">完全免费</strong> · 从 <a href="https://aistudio.google.com/apikey" target="_blank">Google AI Studio</a> 获取（登录 Google 账号即可，无需绑定信用卡）`,
+    tip: `从 <a href="https://aistudio.google.com/apikey" target="_blank">Google AI Studio</a> 获取（部分地区有免费额度）`,
     models: [
       { value: 'gemini-2.0-flash',  label: 'gemini-2.0-flash（最新推荐）' },
-      { value: 'gemini-1.5-flash',  label: 'gemini-1.5-flash（稳定免费）' },
-      { value: 'gemini-1.5-pro',    label: 'gemini-1.5-pro（更强，有限额）' },
+      { value: 'gemini-1.5-flash',  label: 'gemini-1.5-flash（稳定）' },
+      { value: 'gemini-1.5-pro',    label: 'gemini-1.5-pro（更强）' },
     ],
     defaultModel: 'gemini-2.0-flash',
     validate: (k) => k.startsWith('AIza'),
@@ -55,7 +69,7 @@ const PROVIDERS = {
   },
 };
 
-let currentProvider = 'gemini';
+let currentProvider = 'openrouter';
 
 const apiKeyInput  = document.getElementById('apiKey');
 const apiKeyLabel  = document.getElementById('apiKeyLabel');
@@ -85,7 +99,7 @@ function applyProvider(p) {
   modelSelect.value = cfg.defaultModel;
 }
 
-applyProvider('gemini');
+applyProvider('openrouter');
 
 document.querySelectorAll('.provider-tab').forEach((tab) => {
   tab.addEventListener('click', () => {
