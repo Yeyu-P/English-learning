@@ -35,26 +35,45 @@ async function captureAndAnalyze() {
     tabTitle: tab.title || '',
   };
 
-  const { records = [] } = await chrome.storage.local.get(['records']);
+  // Load all settings at once
+  const settings = await chrome.storage.local.get([
+    'apiKey', 'provider', 'model',
+    'screenshotFormat', 'screenshotQuality', 'autoOpenPanel',
+    'analysisLanguage', 'analysisDetail', 'maxRecords',
+    'records',
+  ]);
+
+  const {
+    apiKey,
+    provider          = 'gemini',
+    model,
+    screenshotFormat  = 'jpeg',
+    screenshotQuality = 85,
+    autoOpenPanel     = true,
+    analysisLanguage  = 'chinese',
+    analysisDetail    = 'normal',
+    maxRecords        = 100,
+  } = settings;
+
+  const records = settings.records || [];
   records.unshift(pending);
   await chrome.storage.local.set({ records });
 
-  try {
-    await chrome.sidePanel.open({ windowId: tab.windowId });
-  } catch (_) {}
+  if (autoOpenPanel) {
+    try { await chrome.sidePanel.open({ windowId: tab.windowId }); } catch (_) {}
+  }
 
+  // Capture screenshot
   let screenshotUrl;
   try {
     screenshotUrl = await chrome.tabs.captureVisibleTab(tab.windowId, {
-      format: 'jpeg',
-      quality: 90,
+      format: screenshotFormat,
+      ...(screenshotFormat === 'jpeg' ? { quality: screenshotQuality } : {}),
     });
   } catch (err) {
     await updateRecord(recordId, { loading: false, error: '截图失败: ' + err.message });
     return;
   }
-
-  const { apiKey, provider = 'gemini', model } = await chrome.storage.local.get(['apiKey', 'provider', 'model']);
 
   let analysis = null;
   let error = null;
@@ -63,12 +82,11 @@ async function captureAndAnalyze() {
     error = '未设置 API Key，请点击插件图标进行设置';
   } else {
     try {
+      const prompt = buildPrompt(analysisLanguage, analysisDetail);
       if (provider === 'gemini') {
-        const geminiModel = model || 'gemini-2.0-flash';
-        analysis = await analyzeWithGemini(screenshotUrl, apiKey, geminiModel);
+        analysis = await analyzeWithGemini(screenshotUrl, apiKey, model || 'gemini-2.0-flash', prompt);
       } else {
-        const claudeModel = model || 'claude-sonnet-4-6';
-        analysis = await analyzeWithClaude(screenshotUrl, apiKey, claudeModel);
+        analysis = await analyzeWithClaude(screenshotUrl, apiKey, model || 'claude-sonnet-4-6', prompt);
       }
     } catch (err) {
       error = '分析失败: ' + err.message;
@@ -76,6 +94,14 @@ async function captureAndAnalyze() {
   }
 
   await updateRecord(recordId, { screenshot: screenshotUrl, analysis, loading: false, error });
+
+  // Enforce maxRecords limit
+  if (maxRecords > 0) {
+    const { records: latest = [] } = await chrome.storage.local.get(['records']);
+    if (latest.length > maxRecords) {
+      await chrome.storage.local.set({ records: latest.slice(0, maxRecords) });
+    }
+  }
 }
 
 async function updateRecord(recordId, patch) {
@@ -87,23 +113,41 @@ async function updateRecord(recordId, patch) {
   }
 }
 
-const PROMPT = `你是英语学习助手。这是一张美剧截图。请帮我：
+// ── Prompt builder ─────────────────────────────────────────────
+
+function buildPrompt(language, detail) {
+  const langMap = {
+    chinese:   '中文',
+    bilingual: '中英双语（每项先写中文，再写英文）',
+    english:   'English',
+  };
+  const langNote = langMap[language] || '中文';
+
+  const detailNote = detail === 'detailed'
+    ? '\n4. 分析 1-2 个有代表性的句子的语法结构（用' + langNote + '解释）'
+    : detail === 'concise'
+    ? '\n注意：请保持简洁，词汇表只需列出最重要的 3-5 个。'
+    : '';
+
+  return `你是英语学习助手。这是一张美剧截图。请用【${langNote}】回答，帮我：
 1. 提取图中所有英文台词或字幕
-2. 逐句翻译成中文
-3. 列出值得学习的词汇和短语（尤其是习语、俚语、不常见用法），附中文释义
+2. 逐句翻译
+3. 列出值得学习的词汇和短语（尤其是习语、俚语、不常见用法），附释义${detailNote}
 
 请严格按照以下 JSON 格式返回，不要添加任何额外文字：
 {
   "dialogues": [
-    { "english": "英文原文", "chinese": "中文翻译" }
+    { "english": "英文原文", "chinese": "翻译" }
   ],
   "vocabulary": [
-    { "word": "单词或短语", "meaning": "中文释义", "note": "用法备注（可选，没有则省略此字段）" }
+    { "word": "单词或短语", "meaning": "释义", "note": "用法备注（可选）" }
   ],
-  "scene": "一句话描述画面场景（可选）"
+  "scene": "一句话描述画面场景（可选）"${detail === 'detailed' ? `,
+  "grammar": "语法分析（可选）"` : ''}
 }
 
 如果截图中没有英文内容，返回：{ "dialogues": [], "vocabulary": [], "scene": "无英文内容" }`;
+}
 
 function parseAnalysis(text) {
   const match = text.match(/\{[\s\S]*\}/);
@@ -115,10 +159,9 @@ function parseAnalysis(text) {
 
 // ── Google Gemini ──────────────────────────────────────────────
 
-async function analyzeWithGemini(screenshotUrl, apiKey, model) {
-  const base64 = screenshotUrl.split(',')[1];
+async function analyzeWithGemini(screenshotUrl, apiKey, model, prompt) {
+  const base64  = screenshotUrl.split(',')[1];
   const mimeType = screenshotUrl.startsWith('data:image/jpeg') ? 'image/jpeg' : 'image/png';
-
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
   const resp = await fetch(url, {
@@ -128,7 +171,7 @@ async function analyzeWithGemini(screenshotUrl, apiKey, model) {
       contents: [{
         parts: [
           { inlineData: { mimeType, data: base64 } },
-          { text: PROMPT },
+          { text: prompt },
         ],
       }],
       generationConfig: { maxOutputTokens: 2048 },
@@ -137,10 +180,7 @@ async function analyzeWithGemini(screenshotUrl, apiKey, model) {
 
   if (!resp.ok) {
     let msg = `HTTP ${resp.status}`;
-    try {
-      const body = await resp.json();
-      msg = body.error?.message || msg;
-    } catch (_) {}
+    try { msg = (await resp.json()).error?.message || msg; } catch (_) {}
     throw new Error(msg);
   }
 
@@ -151,8 +191,8 @@ async function analyzeWithGemini(screenshotUrl, apiKey, model) {
 
 // ── Anthropic Claude ───────────────────────────────────────────
 
-async function analyzeWithClaude(screenshotUrl, apiKey, model) {
-  const base64 = screenshotUrl.split(',')[1];
+async function analyzeWithClaude(screenshotUrl, apiKey, model, prompt) {
+  const base64   = screenshotUrl.split(',')[1];
   const mimeType = screenshotUrl.startsWith('data:image/jpeg') ? 'image/jpeg' : 'image/png';
 
   const resp = await fetch('https://api.anthropic.com/v1/messages', {
@@ -169,7 +209,7 @@ async function analyzeWithClaude(screenshotUrl, apiKey, model) {
         role: 'user',
         content: [
           { type: 'image', source: { type: 'base64', media_type: mimeType, data: base64 } },
-          { type: 'text', text: PROMPT },
+          { type: 'text', text: prompt },
         ],
       }],
     }),
@@ -177,14 +217,10 @@ async function analyzeWithClaude(screenshotUrl, apiKey, model) {
 
   if (!resp.ok) {
     let msg = `HTTP ${resp.status}`;
-    try {
-      const body = await resp.json();
-      msg = body.error?.message || msg;
-    } catch (_) {}
+    try { msg = (await resp.json()).error?.message || msg; } catch (_) {}
     throw new Error(msg);
   }
 
   const data = await resp.json();
-  const text = data.content[0].text;
-  return parseAnalysis(text);
+  return parseAnalysis(data.content[0].text);
 }

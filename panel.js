@@ -118,6 +118,12 @@ function buildBody(record) {
     });
   }
 
+  // Grammar analysis (detailed mode)
+  if (a.grammar) {
+    html += `<div class="section-title">📝 语法分析</div>
+             <div class="scene-box" style="border-left-color:#a78bfa">${escHtml(a.grammar)}</div>`;
+  }
+
   // Raw fallback (if JSON parse failed)
   if (a.raw) {
     html += `<div class="section-title">原始分析</div><div class="raw-box">${escHtml(a.raw)}</div>`;

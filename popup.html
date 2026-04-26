@@ -4,227 +4,520 @@
   <meta charset="UTF-8">
   <title>美剧英语助手 - 设置</title>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
-      width: 320px;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      width: 370px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif;
       background: #0f172a;
       color: #e2e8f0;
-      padding: 20px;
+      font-size: 13px;
     }
 
-    .logo {
+    /* ── Header ── */
+    .header {
       display: flex;
       align-items: center;
-      gap: 8px;
-      margin-bottom: 20px;
+      justify-content: space-between;
+      padding: 14px 16px 12px;
+      border-bottom: 1px solid #1e293b;
     }
-    .logo-icon { font-size: 24px; }
-    .logo-text { font-size: 16px; font-weight: 600; color: #f8fafc; }
+    .logo { display: flex; align-items: center; gap: 8px; }
+    .logo-icon { font-size: 20px; }
+    .logo-text { font-size: 15px; font-weight: 700; color: #f8fafc; }
 
-    label {
-      display: block;
-      font-size: 12px;
+    .open-panel-btn {
+      padding: 6px 12px;
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 7px;
       color: #94a3b8;
-      margin-bottom: 6px;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .open-panel-btn:hover { background: #334155; color: #e2e8f0; }
+
+    /* ── Tabs ── */
+    .tabs {
+      display: flex;
+      background: #0f172a;
+      border-bottom: 1px solid #1e293b;
+      padding: 0 16px;
+      gap: 0;
+    }
+    .tab {
+      padding: 10px 14px 9px;
+      border: none;
+      border-bottom: 2px solid transparent;
+      background: transparent;
+      color: #64748b;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+    .tab:hover { color: #94a3b8; }
+    .tab.active { color: #818cf8; border-bottom-color: #818cf8; }
+
+    /* ── Tab panels ── */
+    .panel { display: none; padding: 16px; }
+    .panel.active { display: block; }
+
+    /* ── Form elements ── */
+    .field { margin-bottom: 16px; }
+    .field:last-child { margin-bottom: 0; }
+
+    label, .field-label {
+      display: block;
+      font-size: 11px;
+      font-weight: 600;
+      color: #64748b;
       text-transform: uppercase;
-      letter-spacing: 0.05em;
+      letter-spacing: 0.06em;
+      margin-bottom: 6px;
+    }
+    .field-desc {
+      font-size: 11px;
+      color: #475569;
+      margin-top: 5px;
+      line-height: 1.5;
     }
 
-    input, select {
+    input[type=text],
+    input[type=password],
+    select {
       width: 100%;
-      padding: 8px 12px;
+      padding: 8px 11px;
       background: #1e293b;
       border: 1px solid #334155;
       border-radius: 8px;
       color: #e2e8f0;
       font-size: 13px;
       outline: none;
-      transition: border-color 0.2s;
+      transition: border-color 0.15s;
     }
     input:focus, select:focus { border-color: #6366f1; }
-
-    .field { margin-bottom: 16px; }
 
     .api-key-wrap { position: relative; }
     .api-key-wrap input { padding-right: 36px; }
     .toggle-eye {
-      position: absolute;
-      right: 10px;
-      top: 50%;
+      position: absolute; right: 10px; top: 50%;
       transform: translateY(-50%);
-      background: none;
-      border: none;
-      color: #64748b;
-      cursor: pointer;
-      font-size: 15px;
-      padding: 0;
+      background: none; border: none;
+      color: #64748b; cursor: pointer; font-size: 14px; padding: 0;
     }
 
-    /* Provider tab selector */
+    /* Toggle switch */
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 12px;
+      background: #1e293b;
+      border-radius: 8px;
+      cursor: pointer;
+      user-select: none;
+    }
+    .toggle-row:hover { background: #263348; }
+    .toggle-row-text { flex: 1; }
+    .toggle-row-title { font-size: 13px; color: #e2e8f0; }
+    .toggle-row-sub { font-size: 11px; color: #64748b; margin-top: 2px; }
+
+    .switch { position: relative; width: 36px; height: 20px; flex-shrink: 0; margin-left: 12px; }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider {
+      position: absolute; inset: 0;
+      background: #334155; border-radius: 20px;
+      transition: background 0.2s;
+    }
+    .slider::before {
+      content: '';
+      position: absolute;
+      width: 14px; height: 14px;
+      left: 3px; top: 3px;
+      background: #64748b; border-radius: 50%;
+      transition: all 0.2s;
+    }
+    .switch input:checked + .slider { background: #6366f1; }
+    .switch input:checked + .slider::before { transform: translateX(16px); background: #fff; }
+
+    /* Slider range */
+    .range-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    input[type=range] {
+      flex: 1;
+      -webkit-appearance: none;
+      height: 4px;
+      background: #334155;
+      border-radius: 2px;
+      outline: none;
+      padding: 0;
+      border: none;
+    }
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 16px; height: 16px;
+      background: #6366f1;
+      border-radius: 50%;
+      cursor: pointer;
+    }
+    .range-val {
+      font-size: 12px;
+      color: #94a3b8;
+      min-width: 36px;
+      text-align: right;
+    }
+
+    /* Provider tabs */
     .provider-tabs {
       display: flex;
       gap: 0;
       background: #1e293b;
       border-radius: 8px;
       padding: 3px;
-      margin-bottom: 16px;
     }
     .provider-tab {
-      flex: 1;
-      padding: 7px 10px;
-      border: none;
-      border-radius: 6px;
-      background: transparent;
-      color: #64748b;
-      font-size: 12px;
-      cursor: pointer;
-      transition: all 0.2s;
-      font-weight: 500;
+      flex: 1; padding: 6px 10px;
+      border: none; border-radius: 6px;
+      background: transparent; color: #64748b;
+      font-size: 12px; font-weight: 500;
+      cursor: pointer; transition: all 0.15s;
     }
-    .provider-tab.active {
-      background: #6366f1;
-      color: #fff;
-    }
+    .provider-tab.active { background: #6366f1; color: #fff; }
     .provider-tab:not(.active):hover { color: #e2e8f0; }
 
-    /* Free badge */
     .badge-free {
-      display: inline-block;
-      background: #064e3b;
-      color: #6ee7b7;
-      font-size: 10px;
-      padding: 1px 5px;
-      border-radius: 4px;
-      margin-left: 4px;
-      font-weight: 600;
-      vertical-align: middle;
+      background: #064e3b; color: #6ee7b7;
+      font-size: 10px; padding: 1px 5px;
+      border-radius: 4px; margin-left: 3px; font-weight: 600;
     }
 
     /* Tip box */
     .tip-box {
+      padding: 9px 11px;
       background: #1e293b;
-      border: 1px solid #334155;
       border-radius: 8px;
-      padding: 10px 12px;
       font-size: 12px;
       color: #64748b;
       line-height: 1.6;
-      margin-bottom: 16px;
+      border-left: 3px solid #334155;
     }
     .tip-box a { color: #818cf8; text-decoration: none; }
     .tip-box a:hover { text-decoration: underline; }
-    .tip-box strong { color: #94a3b8; }
 
+    /* ── Shortcut recorder ── */
+    .shortcut-display {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 12px;
+      background: #1e293b;
+      border-radius: 8px;
+      flex-wrap: wrap;
+    }
+    .shortcut-keys { flex: 1; display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+    kbd {
+      display: inline-block;
+      background: #0f172a;
+      border: 1px solid #475569;
+      border-radius: 5px;
+      padding: 2px 8px;
+      font-family: monospace;
+      font-size: 12px;
+      color: #e2e8f0;
+      line-height: 1.6;
+    }
+    .key-sep { color: #475569; font-size: 12px; }
+
+    .btn-modify {
+      padding: 5px 10px;
+      background: #263348;
+      border: 1px solid #334155;
+      border-radius: 6px;
+      color: #94a3b8;
+      font-size: 11px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.15s;
+    }
+    .btn-modify:hover { border-color: #6366f1; color: #818cf8; }
+
+    .capture-area {
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 14px 12px;
+      background: #1e293b;
+      border: 2px dashed #334155;
+      border-radius: 8px;
+      outline: none;
+      cursor: pointer;
+      flex-direction: column;
+      gap: 8px;
+      transition: border-color 0.15s;
+    }
+    .capture-area:focus { border-color: #6366f1; }
+    .capture-area.has-key { border-color: #10b981; }
+    .capture-hint { font-size: 12px; color: #64748b; }
+    .capture-keys { display: flex; align-items: center; gap: 4px; }
+
+    .capture-actions { display: none; gap: 8px; margin-top: 8px; }
+    .capture-actions.show { display: flex; }
+
+    .btn-confirm {
+      padding: 6px 14px;
+      background: #6366f1;
+      border: none; border-radius: 6px;
+      color: #fff; font-size: 12px; font-weight: 600;
+      cursor: pointer; transition: background 0.15s;
+    }
+    .btn-confirm:hover { background: #4f46e5; }
+    .btn-cancel {
+      padding: 6px 12px;
+      background: #1e293b;
+      border: 1px solid #334155; border-radius: 6px;
+      color: #94a3b8; font-size: 12px;
+      cursor: pointer; transition: all 0.15s;
+    }
+    .btn-cancel:hover { border-color: #475569; color: #e2e8f0; }
+
+    .shortcut-error {
+      font-size: 11px;
+      color: #f87171;
+      margin-top: 6px;
+      min-height: 16px;
+    }
+
+    .shortcut-note {
+      font-size: 11px;
+      color: #475569;
+      line-height: 1.6;
+      margin-top: 10px;
+      padding: 8px 10px;
+      background: #1e293b;
+      border-radius: 6px;
+    }
+    .shortcut-note strong { color: #64748b; }
+
+    /* Segmented control (for small choices) */
+    .seg-ctrl {
+      display: flex;
+      background: #1e293b;
+      border-radius: 8px;
+      padding: 3px;
+      gap: 2px;
+    }
+    .seg-btn {
+      flex: 1;
+      padding: 6px 8px;
+      border: none; border-radius: 6px;
+      background: transparent;
+      color: #64748b; font-size: 12px;
+      cursor: pointer; transition: all 0.15s;
+      text-align: center;
+    }
+    .seg-btn.active { background: #334155; color: #e2e8f0; }
+    .seg-btn:not(.active):hover { color: #94a3b8; }
+
+    /* Save button */
     .btn-save {
       width: 100%;
-      padding: 10px;
+      padding: 9px;
       background: #6366f1;
-      color: #fff;
-      border: none;
-      border-radius: 8px;
-      font-size: 14px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: background 0.2s;
+      color: #fff; border: none; border-radius: 8px;
+      font-size: 13px; font-weight: 600;
+      cursor: pointer; transition: background 0.15s;
+      margin-top: 16px;
     }
     .btn-save:hover { background: #4f46e5; }
 
+    /* Toast */
     .toast {
-      margin-top: 12px;
-      padding: 8px 12px;
-      border-radius: 8px;
-      font-size: 13px;
-      text-align: center;
-      opacity: 0;
-      transition: opacity 0.3s;
+      padding: 7px 12px; border-radius: 8px;
+      font-size: 12px; text-align: center;
+      opacity: 0; transition: opacity 0.25s;
+      margin-top: 10px;
     }
     .toast.show { opacity: 1; }
     .toast.success { background: #064e3b; color: #6ee7b7; }
     .toast.error   { background: #450a0a; color: #fca5a5; }
 
-    .shortcut-info {
-      margin-top: 20px;
-      padding: 12px;
-      background: #1e293b;
-      border-radius: 8px;
-      font-size: 12px;
-      color: #64748b;
-      line-height: 1.6;
-    }
-    .shortcut-info kbd {
-      background: #334155;
-      color: #e2e8f0;
-      padding: 2px 6px;
+    .divider { border: none; border-top: 1px solid #1e293b; margin: 14px 0; }
+
+    /* Inline tag for "recommended" */
+    .tag-rec {
+      display: inline-block;
+      background: #1e3a5f;
+      color: #93c5fd;
+      font-size: 10px;
+      padding: 1px 5px;
       border-radius: 4px;
-      font-family: monospace;
+      margin-left: 4px;
+      vertical-align: middle;
     }
-
-    .open-panel-btn {
-      width: 100%;
-      padding: 8px;
-      background: #1e293b;
-      color: #94a3b8;
-      border: 1px solid #334155;
-      border-radius: 8px;
-      font-size: 13px;
-      cursor: pointer;
-      margin-bottom: 16px;
-      transition: all 0.2s;
-    }
-    .open-panel-btn:hover { background: #334155; color: #e2e8f0; }
-
-    .divider { border: none; border-top: 1px solid #1e293b; margin: 16px 0; }
   </style>
 </head>
 <body>
-  <div class="logo">
-    <span class="logo-icon">📺</span>
-    <span class="logo-text">美剧英语助手</span>
+  <!-- Header -->
+  <div class="header">
+    <div class="logo">
+      <span class="logo-icon">📺</span>
+      <span class="logo-text">美剧英语助手</span>
+    </div>
+    <button class="open-panel-btn" id="openPanelBtn">📖 打开记录面板</button>
   </div>
 
-  <button class="open-panel-btn" id="openPanelBtn">📖 打开学习记录面板</button>
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab active" data-tab="api">🔑 API</button>
+    <button class="tab" data-tab="shortcut">⌨️ 快捷键</button>
+    <button class="tab" data-tab="screenshot">📸 截图</button>
+    <button class="tab" data-tab="prefs">✏️ 偏好</button>
+  </div>
 
-  <hr class="divider">
+  <!-- ── Tab: API ── -->
+  <div class="panel active" id="tab-api">
+    <div class="field">
+      <div class="field-label">AI 服务</div>
+      <div class="provider-tabs">
+        <button class="provider-tab active" data-provider="gemini">
+          Google Gemini <span class="badge-free">免费</span>
+        </button>
+        <button class="provider-tab" data-provider="claude">
+          Anthropic Claude
+        </button>
+      </div>
+    </div>
 
-  <!-- Provider selection -->
-  <div class="field">
-    <label>选择 AI 服务</label>
-    <div class="provider-tabs">
-      <button class="provider-tab active" data-provider="gemini">
-        Google Gemini <span class="badge-free">免费</span>
-      </button>
-      <button class="provider-tab" data-provider="claude">
-        Anthropic Claude
-      </button>
+    <div class="tip-box" id="tipBox"></div>
+
+    <div class="field" style="margin-top:14px">
+      <label id="apiKeyLabel">API Key</label>
+      <div class="api-key-wrap">
+        <input type="password" id="apiKey" placeholder="" autocomplete="off">
+        <button class="toggle-eye" id="toggleEye" type="button">👁</button>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>模型</label>
+      <select id="model"></select>
+    </div>
+
+    <button class="btn-save" id="saveApiBtn">保存 API 设置</button>
+    <div class="toast" id="toastApi"></div>
+  </div>
+
+  <!-- ── Tab: Shortcut ── -->
+  <div class="panel" id="tab-shortcut">
+    <div class="field">
+      <div class="field-label">截图快捷键</div>
+
+      <!-- Current shortcut display -->
+      <div class="shortcut-display" id="shortcutDisplay">
+        <div class="shortcut-keys" id="shortcutKeys">加载中…</div>
+        <button class="btn-modify" id="modifyBtn">修改</button>
+      </div>
+
+      <!-- Key capture area -->
+      <div class="capture-area" id="captureArea" tabindex="0">
+        <div class="capture-hint" id="captureHint">点击此处，然后按下新快捷键</div>
+        <div class="capture-keys" id="captureKeys"></div>
+      </div>
+
+      <div class="capture-actions" id="captureActions">
+        <button class="btn-confirm" id="confirmShortcutBtn">确认保存</button>
+        <button class="btn-cancel"  id="cancelShortcutBtn">取消</button>
+        <button class="btn-cancel"  id="resetShortcutBtn">恢复默认</button>
+      </div>
+
+      <div class="shortcut-error" id="shortcutError"></div>
+    </div>
+
+    <div class="shortcut-note">
+      <strong>支持的修饰键：</strong>Ctrl、Alt、Shift（Mac 上 Ctrl = Command）<br>
+      <strong>触发键：</strong>字母、数字、F1–F12、方向键等<br>
+      <strong>默认快捷键：</strong>Ctrl+Shift+E
     </div>
   </div>
 
-  <!-- Tip box (changes per provider) -->
-  <div class="tip-box" id="tipBox"></div>
-
-  <!-- API Key -->
-  <div class="field">
-    <label id="apiKeyLabel">API Key</label>
-    <div class="api-key-wrap">
-      <input type="password" id="apiKey" placeholder="" autocomplete="off">
-      <button class="toggle-eye" id="toggleEye" type="button">👁</button>
+  <!-- ── Tab: Screenshot ── -->
+  <div class="panel" id="tab-screenshot">
+    <div class="field">
+      <div class="field-label">图片格式</div>
+      <div class="seg-ctrl" id="fmtCtrl">
+        <button class="seg-btn active" data-val="jpeg">JPEG <span class="tag-rec">推荐</span></button>
+        <button class="seg-btn" data-val="png">PNG（无损）</button>
+      </div>
+      <div class="field-desc">JPEG 文件更小，PNG 保留完整画质</div>
     </div>
+
+    <div class="field" id="qualityField">
+      <div class="field-label">JPEG 质量</div>
+      <div class="range-row">
+        <input type="range" id="qualityRange" min="50" max="100" step="5" value="85">
+        <span class="range-val" id="qualityVal">85%</span>
+      </div>
+      <div class="field-desc">数值越高画质越好，文件越大</div>
+    </div>
+
+    <div class="field">
+      <label class="toggle-row" for="autoOpenToggle">
+        <div class="toggle-row-text">
+          <div class="toggle-row-title">截图后自动打开侧边栏</div>
+          <div class="toggle-row-sub">截图完成后立即显示分析面板</div>
+        </div>
+        <label class="switch">
+          <input type="checkbox" id="autoOpenToggle" checked>
+          <span class="slider"></span>
+        </label>
+      </label>
+    </div>
+
+    <button class="btn-save" id="saveScreenshotBtn">保存截图设置</button>
+    <div class="toast" id="toastScreenshot"></div>
   </div>
 
-  <!-- Model -->
-  <div class="field">
-    <label>模型</label>
-    <select id="model"></select>
-  </div>
+  <!-- ── Tab: Prefs ── -->
+  <div class="panel" id="tab-prefs">
+    <div class="field">
+      <div class="field-label">解释语言</div>
+      <div class="seg-ctrl" id="langCtrl">
+        <button class="seg-btn active" data-val="chinese">中文 <span class="tag-rec">推荐</span></button>
+        <button class="seg-btn" data-val="bilingual">中英双语</button>
+        <button class="seg-btn" data-val="english">English</button>
+      </div>
+      <div class="field-desc">控制词汇解释和台词翻译的语言</div>
+    </div>
 
-  <button class="btn-save" id="saveBtn">保存设置</button>
-  <div class="toast" id="toast"></div>
+    <div class="field">
+      <div class="field-label">分析详细程度</div>
+      <div class="seg-ctrl" id="detailCtrl">
+        <button class="seg-btn active" data-val="normal">标准</button>
+        <button class="seg-btn" data-val="detailed">详细（含语法）</button>
+        <button class="seg-btn" data-val="concise">简洁</button>
+      </div>
+      <div class="field-desc">详细模式会额外分析语法结构，耗时稍长</div>
+    </div>
 
-  <div class="shortcut-info">
-    快捷键：<kbd>Ctrl+Shift+E</kbd>（Mac: <kbd>⌘⇧E</kbd>）<br>
-    截图后自动分析台词和词汇，结果显示在侧边栏。
+    <div class="field">
+      <div class="field-label">最多保留记录</div>
+      <select id="maxRecords">
+        <option value="50">最近 50 条</option>
+        <option value="100" selected>最近 100 条</option>
+        <option value="200">最近 200 条</option>
+        <option value="0">不限制</option>
+      </select>
+      <div class="field-desc">超出后自动删除最旧的记录</div>
+    </div>
+
+    <button class="btn-save" id="savePrefsBtn">保存偏好设置</button>
+    <div class="toast" id="toastPrefs"></div>
   </div>
 
   <script src="popup.js"></script>
