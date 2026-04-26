@@ -10,7 +10,8 @@
     "sidePanel"
   ],
   "host_permissions": [
-    "https://api.anthropic.com/*"
+    "https://api.anthropic.com/*",
+    "https://generativelanguage.googleapis.com/*"
   ],
   "background": {
     "service_worker": "background.js"
