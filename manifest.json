@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "美剧英语助手",
-  "version": "1.0",
-  "description": "看美剧时按快捷键截图，自动分析英语台词和词汇",
+  "name": "Subtract",
+  "version": "1.1",
+  "description": "Capture subtitles from any video. Extract English with AI.",
   "permissions": [
     "activeTab",
     "storage",
@@ -14,7 +14,6 @@
     "https://api.anthropic.com/*",
     "https://generativelanguage.googleapis.com/*",
     "https://openrouter.ai/*",
-    "https://api.groq.com/*",
     "https://api.groq.com/*"
   ],
   "background": {
@@ -22,7 +21,7 @@
   },
   "action": {
     "default_popup": "popup.html",
-    "default_title": "美剧英语助手 - 设置"
+    "default_title": "Subtract"
   },
   "side_panel": {
     "default_path": "panel.html"
@@ -33,7 +32,14 @@
         "default": "Ctrl+Shift+E",
         "mac": "Command+Shift+E"
       },
-      "description": "截图并分析英语内容"
+      "description": "Full screen capture + AI analysis"
+    },
+    "capture-screenshot-manual": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+S",
+        "mac": "Command+Shift+S"
+      },
+      "description": "Select area to capture + AI analysis"
     }
   }
 }
