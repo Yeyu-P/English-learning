@@ -401,3 +401,125 @@ body::before {
   from { opacity: 0; transform: translateY(8px); }
   to   { opacity: 1; transform: translateY(0); }
 }
+
+/* ── Export modal ── */
+.export-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(26,22,19,0.48);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+}
+
+.export-modal {
+  background: var(--card-bg);
+  border: 1px solid var(--warm-gray);
+  border-radius: 12px;
+  padding: 20px;
+  width: 260px;
+  box-shadow: 0 8px 32px rgba(26,22,19,0.18);
+  animation: fadeUp 0.2s ease both;
+}
+
+.export-modal-title {
+  font-family: 'Newsreader', serif;
+  font-size: 15px;
+  font-style: italic;
+  color: var(--ink);
+  margin-bottom: 16px;
+}
+
+.export-field { margin-bottom: 14px; }
+
+.export-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 8px;
+}
+
+.export-checks { display: flex; flex-direction: column; gap: 7px; }
+
+.export-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--ink);
+  user-select: none;
+}
+
+.export-check input[type=checkbox] {
+  width: 14px;
+  height: 14px;
+  accent-color: var(--amber);
+  cursor: pointer;
+  flex-shrink: 0;
+  margin: 0;
+}
+
+.export-check-indent { padding-left: 22px; }
+
+.export-modal-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.export-modal-cancel {
+  flex: 1;
+  padding: 8px;
+  background: var(--paper);
+  border: 1px solid var(--warm-gray);
+  border-radius: 7px;
+  color: var(--muted);
+  font-size: 12px;
+  font-family: 'DM Sans', sans-serif;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.export-modal-cancel:hover { border-color: rgba(26,22,19,0.3); color: var(--ink); }
+
+.export-modal-go {
+  flex: 2;
+  padding: 8px;
+  background: var(--ink);
+  border: none;
+  border-radius: 7px;
+  color: var(--paper);
+  font-size: 12px;
+  font-weight: 600;
+  font-family: 'DM Sans', sans-serif;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+.export-modal-go:hover { opacity: 0.85; }
+
+/* Export segmented control */
+.export-modal .seg-ctrl {
+  display: flex;
+  background: var(--card-bg);
+  border: 1px solid var(--warm-gray);
+  border-radius: 7px;
+  padding: 3px;
+  gap: 2px;
+}
+.export-modal .seg-btn {
+  flex: 1;
+  padding: 5px 8px;
+  border: none; border-radius: 5px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+  font-family: 'DM Sans', sans-serif;
+  cursor: pointer;
+  transition: all 0.15s;
+  text-align: center;
+}
+.export-modal .seg-btn.active { background: var(--ink); color: var(--paper); }
+.export-modal .seg-btn:not(.active):hover { color: var(--ink); }
