@@ -423,7 +423,7 @@
     <div class="tip-box" id="tipBox"></div>
 
     <div class="field" style="margin-top:14px">
-      <label id="apiKeyLabel">API Key</label>
+      <label id="apiKeyLabel" for="apiKey">API Key</label>
       <div class="api-key-wrap">
         <input type="password" id="apiKey" placeholder="" autocomplete="off">
         <button class="toggle-eye" id="toggleEye" type="button">👁</button>
@@ -508,7 +508,7 @@
     </div>
 
     <div class="field">
-      <label class="toggle-row" for="autoOpenToggle">
+      <div class="toggle-row">
         <div class="toggle-row-text">
           <div class="toggle-row-title">Auto-open panel</div>
           <div class="toggle-row-sub">Show side panel after each capture</div>
@@ -517,7 +517,7 @@
           <input type="checkbox" id="autoOpenToggle" checked>
           <span class="slider"></span>
         </label>
-      </label>
+      </div>
     </div>
 
     <button class="btn-save" id="saveScreenshotBtn">Save screenshot settings</button>
