@@ -1,0 +1,198 @@
+// floater.js — floating capture button, injected on all pages via manifest content_scripts
+(function () {
+  if (document.getElementById('__subtract-floater__')) return;
+
+  const LOGO_SVG = `<svg width="16" height="16" viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <rect width="52" height="52" rx="10" fill="#1a1613"/>
+    <rect x="8" y="10" width="36" height="22" rx="2.5" stroke="#f8f5f0" stroke-width="2.5" fill="none"/>
+    <rect x="14" y="22" width="14" height="3" rx="1.5" fill="#c8713a"/>
+    <line x1="26" y1="32" x2="26" y2="41" stroke="#f8f5f0" stroke-width="2.2" stroke-linecap="round"/>
+    <polyline points="22,38 26,42 30,38" fill="none" stroke="#f8f5f0" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>`;
+
+  const ICON_FULL = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f8f5f0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>
+  </svg>`;
+
+  const ICON_AREA = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f8f5f0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/>
+    <path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/>
+  </svg>`;
+
+  const ICON_CHECK = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#5a7a62" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`;
+  const ICON_X = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#b35a5a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`;
+  const ICON_SPIN = `<div style="width:14px;height:14px;border:2px solid rgba(248,245,240,0.25);border-top-color:#c8713a;border-radius:50%;animation:__sb_spin 0.75s linear infinite;flex-shrink:0"></div>`;
+
+  chrome.storage.local.get(['floaterEnabled', 'floaterPos'], ({ floaterEnabled, floaterPos }) => {
+    if (floaterEnabled === false) return;
+    createFloater(floaterPos || { right: 20, bottom: 20 });
+  });
+
+  function createFloater({ right, bottom }) {
+    // ── Styles
+    if (!document.getElementById('__subtract-floater-style__')) {
+      const s = document.createElement('style');
+      s.id = '__subtract-floater-style__';
+      s.textContent = `
+        @keyframes __sb_spin { to { transform: rotate(360deg); } }
+        #__subtract-floater__ {
+          position: fixed; z-index: 2147483646;
+          display: flex; flex-direction: column-reverse; align-items: center; gap: 6px;
+          pointer-events: none;
+        }
+        #__subtract-floater__ * { box-sizing: border-box; }
+        .__sb-main {
+          width: 36px; height: 36px; border-radius: 50%;
+          background: rgba(26,22,19,0.75);
+          border: 1.5px solid rgba(248,245,240,0.18);
+          display: flex; align-items: center; justify-content: center;
+          cursor: grab; pointer-events: all;
+          transition: background 0.15s, transform 0.15s;
+          backdrop-filter: blur(6px);
+          -webkit-backdrop-filter: blur(6px);
+        }
+        .__sb-main:hover { background: rgba(26,22,19,0.92); }
+        .__sb-actions {
+          display: flex; flex-direction: column-reverse;
+          align-items: center; gap: 5px;
+          opacity: 0; pointer-events: none;
+          transition: opacity 0.15s, transform 0.15s;
+          transform: translateY(4px);
+        }
+        #__subtract-floater__:hover .__sb-actions {
+          opacity: 1; pointer-events: all; transform: translateY(0);
+        }
+        .__sb-action {
+          position: relative;
+          width: 30px; height: 30px; border-radius: 50%;
+          background: rgba(26,22,19,0.80);
+          border: 1.5px solid rgba(248,245,240,0.18);
+          display: flex; align-items: center; justify-content: center;
+          cursor: pointer; pointer-events: all;
+          transition: background 0.15s;
+          backdrop-filter: blur(6px);
+          -webkit-backdrop-filter: blur(6px);
+        }
+        .__sb-action:hover { background: rgba(200,113,58,0.85); }
+        .__sb-tip {
+          position: absolute; right: 38px;
+          background: rgba(26,22,19,0.85); color: #f8f5f0;
+          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+          font-size: 11px; padding: 3px 8px; border-radius: 4px;
+          white-space: nowrap; pointer-events: none;
+          opacity: 0; transition: opacity 0.1s;
+        }
+        .__sb-action:hover .__sb-tip { opacity: 1; }
+      `;
+      document.head.appendChild(s);
+    }
+
+    // ── Build DOM
+    const floater = document.createElement('div');
+    floater.id = '__subtract-floater__';
+    floater.style.right = right + 'px';
+    floater.style.bottom = bottom + 'px';
+
+    const actions = document.createElement('div');
+    actions.className = '__sb-actions';
+    const btnFull = makeBtn(ICON_FULL, 'Full screen');
+    const btnArea = makeBtn(ICON_AREA, 'Select area');
+    actions.appendChild(btnFull);
+    actions.appendChild(btnArea);
+
+    const main = document.createElement('div');
+    main.className = '__sb-main';
+    main.innerHTML = LOGO_SVG;
+
+    floater.appendChild(actions);
+    floater.appendChild(main);
+    document.documentElement.appendChild(floater);
+
+    // ── Click handlers
+    btnFull.addEventListener('click', (e) => {
+      e.stopPropagation();
+      setStatus('loading');
+      chrome.runtime.sendMessage({ type: 'subtract-float-capture', mode: 'full' });
+    });
+
+    btnArea.addEventListener('click', (e) => {
+      e.stopPropagation();
+      floater.style.display = 'none';
+      chrome.runtime.sendMessage({ type: 'subtract-float-capture', mode: 'area' });
+    });
+
+    // ── Background messages
+    chrome.runtime.onMessage.addListener((msg) => {
+      if (msg.type === 'subtract-float-restore') {
+        floater.style.display = '';
+        setStatus('idle');
+      }
+      if (msg.type === 'subtract-float-status') {
+        setStatus(msg.status);
+        if (msg.status === 'done' || msg.status === 'error' || msg.status === 'cancelled') {
+          setTimeout(() => setStatus('idle'), 2000);
+        }
+      }
+    });
+
+    // ── Drag to reposition (drag vs click: only reposition if moved > 4px)
+    let dragging = false, moved = false;
+    let dragStartX = 0, dragStartY = 0, startRight = right, startBottom = bottom;
+
+    main.addEventListener('mousedown', (e) => {
+      if (e.button !== 0) return;
+      dragging = true;
+      moved = false;
+      dragStartX = e.clientX;
+      dragStartY = e.clientY;
+      startRight  = parseInt(floater.style.right, 10)  || 20;
+      startBottom = parseInt(floater.style.bottom, 10) || 20;
+      main.style.cursor = 'grabbing';
+      e.preventDefault();
+    });
+
+    document.addEventListener('mousemove', (e) => {
+      if (!dragging) return;
+      const dx = e.clientX - dragStartX;
+      const dy = e.clientY - dragStartY;
+      if (!moved && Math.abs(dx) < 4 && Math.abs(dy) < 4) return;
+      moved = true;
+      floater.style.right  = Math.max(8, startRight  - dx) + 'px';
+      floater.style.bottom = Math.max(8, startBottom - dy) + 'px';
+    });
+
+    document.addEventListener('mouseup', () => {
+      if (!dragging) return;
+      dragging = false;
+      main.style.cursor = 'grab';
+      if (moved) {
+        chrome.storage.local.set({
+          floaterPos: {
+            right:  parseInt(floater.style.right, 10)  || 20,
+            bottom: parseInt(floater.style.bottom, 10) || 20,
+          },
+        });
+      }
+    });
+
+    // ── Status icon
+    function setStatus(status) {
+      if (status === 'loading') {
+        main.innerHTML = ICON_SPIN;
+      } else if (status === 'done') {
+        main.innerHTML = ICON_CHECK;
+      } else if (status === 'error' || status === 'cancelled') {
+        main.innerHTML = ICON_X;
+      } else {
+        main.innerHTML = LOGO_SVG;
+      }
+    }
+  }
+
+  function makeBtn(iconSvg, tooltip) {
+    const btn = document.createElement('div');
+    btn.className = '__sb-action';
+    btn.innerHTML = `${iconSvg}<span class="__sb-tip">${tooltip}</span>`;
+    return btn;
+  }
+})();
