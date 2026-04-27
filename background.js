@@ -32,10 +32,59 @@ chrome.commands.onCommand.addListener(async (command) => {
   }
 });
 
+// ── Float-capture message listener ─────────────────────────────
+
+chrome.runtime.onMessage.addListener((msg, sender) => {
+  if (msg.type !== 'subtract-float-capture') return false;
+  if (isCapturing) {
+    sendFloatMsg(sender.tab.id, { type: 'subtract-float-status', status: 'error' });
+    return false;
+  }
+  handleFloatCapture(msg.mode, sender.tab);
+  return false;
+});
+
+async function handleFloatCapture(mode, tab) {
+  isCapturing = true;
+  chrome.action.setBadgeText({ text: '...' });
+  chrome.action.setBadgeBackgroundColor({ color: '#c8713a' });
+
+  try {
+    if (mode === 'full') {
+      await captureFullScreen(tab);
+    } else {
+      await captureManual(tab, () => {
+        // Selector overlay is gone — floater can reappear
+        sendFloatMsg(tab.id, { type: 'subtract-float-restore' });
+      });
+    }
+    chrome.action.setBadgeText({ text: 'OK' });
+    chrome.action.setBadgeBackgroundColor({ color: '#5a7a62' });
+    sendFloatMsg(tab.id, { type: 'subtract-float-status', status: 'done' });
+  } catch (err) {
+    if (err.message === 'cancelled') {
+      chrome.action.setBadgeText({ text: '' });
+      sendFloatMsg(tab.id, { type: 'subtract-float-status', status: 'cancelled' });
+    } else {
+      console.error('Float capture error:', err);
+      chrome.action.setBadgeText({ text: '!' });
+      chrome.action.setBadgeBackgroundColor({ color: '#b35a5a' });
+      sendFloatMsg(tab.id, { type: 'subtract-float-status', status: 'error' });
+    }
+  } finally {
+    setTimeout(() => chrome.action.setBadgeText({ text: '' }), 2500);
+    isCapturing = false;
+  }
+}
+
+function sendFloatMsg(tabId, msg) {
+  chrome.tabs.sendMessage(tabId, msg).catch(() => {});
+}
+
 // ── Full-screen capture ────────────────────────────────────────
 
-async function captureFullScreen() {
-  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+async function captureFullScreen(tab = null) {
+  if (!tab) [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   const settings = await loadSettings();
   const { recordId } = await createPendingRecord(tab, settings);
 
@@ -60,48 +109,56 @@ async function captureFullScreen() {
 
 // ── Manual area-selection capture ──────────────────────────────
 
-async function captureManual() {
-  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+async function captureManual(tab = null, onSelectionDone = null) {
+  if (!tab) [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   const settings = await loadSettings();
 
   // Inject selector overlay and wait for user to draw a rect
-  const { rect, dpr } = await new Promise((resolve, reject) => {
-    const TIMEOUT_MS = 60_000;
-    const timer = setTimeout(() => {
-      chrome.runtime.onMessage.removeListener(listener);
-      reject(new Error('Selection timed out'));
-    }, TIMEOUT_MS);
-
-    function listener(msg, sender) {
-      if (sender.tab?.id !== tab.id) return;
-
-      if (msg.type === 'subtract-selection-rect') {
-        clearTimeout(timer);
+  let rectData;
+  try {
+    rectData = await new Promise((resolve, reject) => {
+      const TIMEOUT_MS = 60_000;
+      const timer = setTimeout(() => {
         chrome.runtime.onMessage.removeListener(listener);
-        resolve({ rect: msg.rect, dpr: msg.devicePixelRatio });
-        return true;
+        reject(new Error('Selection timed out'));
+      }, TIMEOUT_MS);
+
+      function listener(msg, sender) {
+        if (sender.tab?.id !== tab.id) return;
+
+        if (msg.type === 'subtract-selection-rect') {
+          clearTimeout(timer);
+          chrome.runtime.onMessage.removeListener(listener);
+          resolve({ rect: msg.rect, dpr: msg.devicePixelRatio });
+          return true;
+        }
+
+        if (msg.type === 'subtract-selection-cancelled') {
+          clearTimeout(timer);
+          chrome.runtime.onMessage.removeListener(listener);
+          reject(new Error('cancelled'));
+          return true;
+        }
       }
 
-      if (msg.type === 'subtract-selection-cancelled') {
+      chrome.runtime.onMessage.addListener(listener);
+
+      chrome.scripting.executeScript({
+        target: { tabId: tab.id },
+        files: ['selector.js'],
+      }).catch((err) => {
         clearTimeout(timer);
         chrome.runtime.onMessage.removeListener(listener);
-        reject(new Error('cancelled'));
-        return true;
-      }
-    }
-
-    chrome.runtime.onMessage.addListener(listener);
-
-    chrome.scripting.executeScript({
-      target: { tabId: tab.id },
-      files: ['selector.js'],
-    }).catch((err) => {
-      clearTimeout(timer);
-      chrome.runtime.onMessage.removeListener(listener);
-      reject(err);
+        reject(err);
+      });
     });
-  });
+  } catch (err) {
+    onSelectionDone?.();
+    throw err;
+  }
+  onSelectionDone?.();
 
+  const { rect, dpr } = rectData;
   const { recordId } = await createPendingRecord(tab, settings);
 
   if (settings.autoOpenPanel) {

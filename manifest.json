@@ -41,5 +41,12 @@
       },
       "description": "Select area to capture + AI analysis"
     }
-  }
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["floater.js"],
+      "run_at": "document_idle"
+    }
+  ]
 }
