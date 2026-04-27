@@ -1,9 +1,12 @@
 <!DOCTYPE html>
-<html lang="zh">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>美剧英语助手</title>
+  <title>Subtract</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;1,6..72,400&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="panel.css">
 </head>
 <body>
@@ -11,25 +14,54 @@
 
     <!-- Header -->
     <div class="header">
-      <span class="header-title">📺 英语学习记录</span>
+      <div class="header-logo">
+        <svg width="22" height="22" viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect width="52" height="52" rx="10" fill="#1a1613"/>
+          <rect x="8" y="10" width="36" height="22" rx="2.5" stroke="#f8f5f0" stroke-width="2.5" fill="none"/>
+          <rect x="14" y="22" width="14" height="3" rx="1.5" fill="#c8713a"/>
+          <line x1="26" y1="32" x2="26" y2="41" stroke="#f8f5f0" stroke-width="2.2" stroke-linecap="round"/>
+          <polyline points="22,38 26,42 30,38" fill="none" stroke="#f8f5f0" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span class="header-logo-text">Subtract</span>
+      </div>
       <div class="header-actions">
-        <button id="exportBtn" title="导出为 JSON" class="btn-icon">⬇</button>
-        <button id="clearBtn" title="清空所有记录" class="btn-icon btn-danger">🗑</button>
+        <button id="exportBtn" title="Export as JSON" class="btn-icon">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+        </button>
+        <button id="clearBtn" title="Clear all records" class="btn-icon btn-danger">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="3 6 5 6 21 6"/>
+            <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+            <path d="M10 11v6"/><path d="M14 11v6"/>
+          </svg>
+        </button>
       </div>
     </div>
 
     <!-- Empty state -->
     <div id="emptyState" class="empty-state hidden">
-      <div class="empty-icon">📸</div>
-      <div class="empty-title">还没有记录</div>
-      <div class="empty-hint">按 <kbd>Ctrl+Shift+E</kbd> 截图开始学习</div>
+      <div class="empty-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#5a7a62" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="2" y="3" width="20" height="14" rx="2"/>
+          <line x1="8" y1="21" x2="16" y2="21"/>
+          <line x1="12" y1="17" x2="12" y2="21"/>
+        </svg>
+      </div>
+      <div class="empty-title">No captures yet</div>
+      <div class="empty-hint">
+        Press <kbd>⌘⇧E</kbd> to capture full screen<br>
+        or <kbd>⌘⇧S</kbd> to select an area
+      </div>
     </div>
 
     <!-- Records list -->
     <div id="recordsList"></div>
 
   </div>
-
   <script src="panel.js"></script>
 </body>
 </html>
