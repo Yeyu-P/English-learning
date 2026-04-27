@@ -1,90 +1,174 @@
 let isCapturing = false;
 
-chrome.commands.onCommand.addListener(async (command) => {
-  if (command === 'capture-screenshot' && !isCapturing) {
-    isCapturing = true;
-    chrome.action.setBadgeText({ text: '...' });
-    chrome.action.setBadgeBackgroundColor({ color: '#f59e0b' });
+// ── Command listener ────────────────────────────────────────────
 
-    try {
-      await captureAndAnalyze();
-      chrome.action.setBadgeText({ text: 'OK' });
-      chrome.action.setBadgeBackgroundColor({ color: '#10b981' });
-    } catch (err) {
+chrome.commands.onCommand.addListener(async (command) => {
+  if (isCapturing) return;
+  if (command !== 'capture-screenshot' && command !== 'capture-screenshot-manual') return;
+
+  isCapturing = true;
+  chrome.action.setBadgeText({ text: '...' });
+  chrome.action.setBadgeBackgroundColor({ color: '#c8713a' });
+
+  try {
+    if (command === 'capture-screenshot') {
+      await captureFullScreen();
+    } else {
+      await captureManual();
+    }
+    chrome.action.setBadgeText({ text: 'OK' });
+    chrome.action.setBadgeBackgroundColor({ color: '#5a7a62' });
+  } catch (err) {
+    if (err.message !== 'cancelled') {
       console.error('Capture error:', err);
       chrome.action.setBadgeText({ text: '!' });
-      chrome.action.setBadgeBackgroundColor({ color: '#ef4444' });
-    } finally {
-      setTimeout(() => chrome.action.setBadgeText({ text: '' }), 2500);
-      isCapturing = false;
+      chrome.action.setBadgeBackgroundColor({ color: '#b35a5a' });
+    } else {
+      chrome.action.setBadgeText({ text: '' });
     }
+  } finally {
+    setTimeout(() => chrome.action.setBadgeText({ text: '' }), 2500);
+    isCapturing = false;
   }
 });
 
-async function captureAndAnalyze() {
+// ── Full-screen capture ────────────────────────────────────────
+
+async function captureFullScreen() {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  const settings = await loadSettings();
+  const { recordId } = await createPendingRecord(tab, settings);
 
-  const recordId = Date.now();
-  const pending = {
-    id: recordId,
-    timestamp: new Date().toISOString(),
-    screenshot: null,
-    analysis: null,
-    loading: true,
-    error: null,
-    tabTitle: tab.title || '',
-  };
-
-  // Load all settings at once
-  const settings = await chrome.storage.local.get([
-    'apiKey', 'provider', 'model',
-    'screenshotFormat', 'screenshotQuality', 'autoOpenPanel',
-    'analysisLanguage', 'analysisDetail', 'maxRecords',
-    'records',
-  ]);
-
-  const {
-    apiKey,
-    provider          = 'openrouter',
-    model,
-    screenshotFormat  = 'jpeg',
-    screenshotQuality = 85,
-    autoOpenPanel     = true,
-    analysisLanguage  = 'chinese',
-    analysisDetail    = 'normal',
-    maxRecords        = 100,
-  } = settings;
-
-  const records = settings.records || [];
-  records.unshift(pending);
-  await chrome.storage.local.set({ records });
-
-  if (autoOpenPanel) {
+  if (settings.autoOpenPanel) {
     try { await chrome.sidePanel.open({ windowId: tab.windowId }); } catch (_) {}
   }
 
-  // Capture screenshot
   let screenshotUrl;
   try {
     screenshotUrl = await chrome.tabs.captureVisibleTab(tab.windowId, {
-      format: screenshotFormat,
-      ...(screenshotFormat === 'jpeg' ? { quality: screenshotQuality } : {}),
+      format: settings.screenshotFormat,
+      ...(settings.screenshotFormat === 'jpeg' ? { quality: settings.screenshotQuality } : {}),
     });
   } catch (err) {
-    await updateRecord(recordId, { loading: false, error: '截图失败: ' + err.message });
-    showPageToast(tab.id, '截图失败', 'error');
+    await updateRecord(recordId, { loading: false, error: 'Screenshot failed: ' + err.message });
+    showPageToast(tab.id, 'Screenshot failed', 'error');
     return;
   }
 
-  // Immediate feedback: screenshot captured, now analyzing
-  showPageToast(tab.id, 'AI 分析中…', 'loading');
+  await analyzeAndStore(tab, screenshotUrl, recordId, settings);
+}
 
+// ── Manual area-selection capture ──────────────────────────────
+
+async function captureManual() {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  const settings = await loadSettings();
+
+  // Inject selector overlay and wait for user to draw a rect
+  const { rect, dpr } = await new Promise((resolve, reject) => {
+    const TIMEOUT_MS = 60_000;
+    const timer = setTimeout(() => {
+      chrome.runtime.onMessage.removeListener(listener);
+      reject(new Error('Selection timed out'));
+    }, TIMEOUT_MS);
+
+    function listener(msg, sender) {
+      if (sender.tab?.id !== tab.id) return;
+
+      if (msg.type === 'subtract-selection-rect') {
+        clearTimeout(timer);
+        chrome.runtime.onMessage.removeListener(listener);
+        resolve({ rect: msg.rect, dpr: msg.devicePixelRatio });
+        return true;
+      }
+
+      if (msg.type === 'subtract-selection-cancelled') {
+        clearTimeout(timer);
+        chrome.runtime.onMessage.removeListener(listener);
+        reject(new Error('cancelled'));
+        return true;
+      }
+    }
+
+    chrome.runtime.onMessage.addListener(listener);
+
+    chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      files: ['selector.js'],
+    }).catch((err) => {
+      clearTimeout(timer);
+      chrome.runtime.onMessage.removeListener(listener);
+      reject(err);
+    });
+  });
+
+  const { recordId } = await createPendingRecord(tab, settings);
+
+  if (settings.autoOpenPanel) {
+    try { await chrome.sidePanel.open({ windowId: tab.windowId }); } catch (_) {}
+  }
+
+  // Capture full screen then crop to selected rect
+  let screenshotUrl;
+  try {
+    const full = await chrome.tabs.captureVisibleTab(tab.windowId, {
+      format: settings.screenshotFormat,
+      ...(settings.screenshotFormat === 'jpeg' ? { quality: settings.screenshotQuality } : {}),
+    });
+    screenshotUrl = await cropScreenshot(tab.id, full, rect, dpr, settings);
+  } catch (err) {
+    await updateRecord(recordId, { loading: false, error: 'Screenshot failed: ' + err.message });
+    showPageToast(tab.id, 'Screenshot failed', 'error');
+    return;
+  }
+
+  await analyzeAndStore(tab, screenshotUrl, recordId, settings);
+}
+
+// ── Crop via content script (service worker has no canvas) ─────
+
+async function cropScreenshot(tabId, dataUrl, rect, dpr, settings) {
+  const [result] = await chrome.scripting.executeScript({
+    target: { tabId },
+    func: (dataUrl, rect, dpr, fmt, quality) => {
+      return new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          canvas.width  = Math.round(rect.width  * dpr);
+          canvas.height = Math.round(rect.height * dpr);
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(
+            img,
+            Math.round(rect.x * dpr), Math.round(rect.y * dpr),
+            Math.round(rect.width * dpr), Math.round(rect.height * dpr),
+            0, 0,
+            Math.round(rect.width * dpr), Math.round(rect.height * dpr)
+          );
+          const mimeType = fmt === 'png' ? 'image/png' : 'image/jpeg';
+          resolve(canvas.toDataURL(mimeType, quality / 100));
+        };
+        img.onerror = () => resolve(dataUrl); // fallback: return full screenshot
+        img.src = dataUrl;
+      });
+    },
+    args: [dataUrl, rect, dpr, settings.screenshotFormat, settings.screenshotQuality],
+  });
+  return result.result;
+}
+
+// ── Shared: AI analysis + record update ───────────────────────
+
+async function analyzeAndStore(tab, screenshotUrl, recordId, settings) {
+  showPageToast(tab.id, 'AI analyzing…', 'loading');
+
+  const { apiKey, provider, model, analysisLanguage, analysisDetail } = settings;
   let analysis = null;
   let error = null;
 
   if (!apiKey) {
-    error = '未设置 API Key，请点击插件图标进行设置';
-    showPageToast(tab.id, '未设置 API Key', 'error');
+    error = 'No API key set — click the extension icon to configure';
+    showPageToast(tab.id, 'No API key set', 'error');
   } else {
     try {
       const prompt = buildPrompt(analysisLanguage, analysisDetail);
@@ -98,21 +182,69 @@ async function captureAndAnalyze() {
         analysis = await analyzeWithClaude(screenshotUrl, apiKey, model || 'claude-sonnet-4-6', prompt);
       }
       const vocabCount = analysis?.vocabulary?.length || 0;
-      showPageToast(tab.id, '分析完成', 'success', vocabCount);
+      showPageToast(tab.id, 'Done', 'success', vocabCount);
     } catch (err) {
-      error = '分析失败: ' + err.message;
-      showPageToast(tab.id, '分析失败，请检查 API Key', 'error');
+      error = 'Analysis failed: ' + err.message;
+      showPageToast(tab.id, 'Analysis failed — check API key', 'error');
     }
   }
 
   await updateRecord(recordId, { screenshot: screenshotUrl, analysis, loading: false, error });
 
   // Enforce maxRecords limit
+  const { maxRecords } = settings;
   if (maxRecords > 0) {
     const { records: latest = [] } = await chrome.storage.local.get(['records']);
     if (latest.length > maxRecords) {
       await chrome.storage.local.set({ records: latest.slice(0, maxRecords) });
     }
+  }
+}
+
+// ── Helpers ────────────────────────────────────────────────────
+
+async function loadSettings() {
+  const s = await chrome.storage.local.get([
+    'apiKey', 'provider', 'model',
+    'screenshotFormat', 'screenshotQuality', 'autoOpenPanel',
+    'analysisLanguage', 'analysisDetail', 'maxRecords',
+  ]);
+  return {
+    apiKey:            s.apiKey,
+    provider:          s.provider          || 'groq',
+    model:             s.model,
+    screenshotFormat:  s.screenshotFormat  || 'jpeg',
+    screenshotQuality: s.screenshotQuality ?? 85,
+    autoOpenPanel:     s.autoOpenPanel     ?? true,
+    analysisLanguage:  s.analysisLanguage  || 'chinese',
+    analysisDetail:    s.analysisDetail    || 'normal',
+    maxRecords:        s.maxRecords        ?? 100,
+  };
+}
+
+async function createPendingRecord(tab, settings) {
+  const recordId = Date.now();
+  const pending = {
+    id:         recordId,
+    timestamp:  new Date().toISOString(),
+    screenshot: null,
+    analysis:   null,
+    loading:    true,
+    error:      null,
+    tabTitle:   tab.title || '',
+  };
+  const { records = [] } = await chrome.storage.local.get(['records']);
+  records.unshift(pending);
+  await chrome.storage.local.set({ records });
+  return { recordId };
+}
+
+async function updateRecord(recordId, patch) {
+  const { records = [] } = await chrome.storage.local.get(['records']);
+  const idx = records.findIndex((r) => r.id === recordId);
+  if (idx !== -1) {
+    records[idx] = { ...records[idx], ...patch };
+    await chrome.storage.local.set({ records });
   }
 }
 
@@ -122,15 +254,15 @@ function showPageToast(tabId, msg, type, vocabCount = 0) {
   chrome.scripting.executeScript({
     target: { tabId },
     func: (message, toastType, count) => {
-      const ID = '__el-toast__';
-      const STYLE_ID = '__el-toast-style__';
+      const ID = '__subtract-toast__';
+      const STYLE_ID = '__subtract-toast-style__';
 
       if (!document.getElementById(STYLE_ID)) {
         const s = document.createElement('style');
         s.id = STYLE_ID;
         s.textContent = `
-          @keyframes __el_spin { to { transform: rotate(360deg); } }
-          @keyframes __el_in   { from { opacity: 0; transform: translateY(-10px); }
+          @keyframes __sb_spin { to { transform: rotate(360deg); } }
+          @keyframes __sb_in   { from { opacity: 0; transform: translateY(-8px); }
                                   to   { opacity: 1; transform: translateY(0); } }
         `;
         document.head.appendChild(s);
@@ -142,26 +274,27 @@ function showPageToast(tabId, msg, type, vocabCount = 0) {
       const el = document.createElement('div');
       el.id = ID;
 
-      const BG     = { loading: '#1e293b', success: '#052e16', error: '#450a0a' };
-      const BORDER = { loading: '#475569', success: '#16a34a', error: '#dc2626' };
+      const BG     = { loading: '#fffdf9', success: '#f0f7f1', error: '#fdf0f0' };
+      const BORDER = { loading: '#e8e2da', success: '#5a7a62', error: '#b35a5a' };
+      const COLOR  = { loading: '#9a918a', success: '#5a7a62', error: '#b35a5a' };
 
       Object.assign(el.style, {
         position:      'fixed',
         top:           '20px',
         right:         '20px',
         zIndex:        '2147483647',
-        padding:       '10px 15px',
-        borderRadius:  '12px',
+        padding:       '9px 14px',
+        borderRadius:  '10px',
         border:        `1px solid ${BORDER[toastType] || BORDER.loading}`,
         background:    BG[toastType] || BG.loading,
-        color:         '#f1f5f9',
+        color:         COLOR[toastType] || COLOR.loading,
         fontFamily:    '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
         fontSize:      '13px',
         display:       'flex',
         alignItems:    'center',
-        gap:           '9px',
-        boxShadow:     '0 8px 28px rgba(0,0,0,0.45)',
-        animation:     '__el_in 0.22s ease',
+        gap:           '8px',
+        boxShadow:     '0 4px 20px rgba(26,22,19,0.12)',
+        animation:     '__sb_in 0.2s ease',
         maxWidth:      '260px',
         lineHeight:    '1.4',
         pointerEvents: 'none',
@@ -170,15 +303,15 @@ function showPageToast(tabId, msg, type, vocabCount = 0) {
 
       let icon = '';
       if (toastType === 'loading') {
-        icon = `<div style="width:13px;height:13px;border:2px solid #475569;border-top-color:#f59e0b;border-radius:50%;animation:__el_spin 0.75s linear infinite;flex-shrink:0"></div>`;
+        icon = `<div style="width:13px;height:13px;border:2px solid #e8e2da;border-top-color:#c8713a;border-radius:50%;animation:__sb_spin 0.75s linear infinite;flex-shrink:0"></div>`;
       } else if (toastType === 'success') {
-        icon = `<span style="color:#4ade80;font-size:15px;flex-shrink:0;font-weight:700">✓</span>`;
+        icon = `<svg style="width:14px;height:14px;flex-shrink:0" viewBox="0 0 24 24" fill="none" stroke="#5a7a62" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`;
       } else {
-        icon = `<span style="font-size:14px;flex-shrink:0">⚠</span>`;
+        icon = `<svg style="width:14px;height:14px;flex-shrink:0" viewBox="0 0 24 24" fill="none" stroke="#b35a5a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`;
       }
 
       const label = (toastType === 'success' && count > 0)
-        ? `${message} · <span style="color:#86efac">${count} 个词汇</span>`
+        ? `${message} · <span style="font-weight:600">${count} vocab</span>`
         : message;
 
       el.innerHTML = `${icon}<span>${label}</span>`;
@@ -186,22 +319,13 @@ function showPageToast(tabId, msg, type, vocabCount = 0) {
 
       if (toastType !== 'loading') {
         setTimeout(() => {
-          Object.assign(el.style, { transition: 'opacity 0.3s, transform 0.3s', opacity: '0', transform: 'translateY(-10px)' });
+          Object.assign(el.style, { transition: 'opacity 0.3s, transform 0.3s', opacity: '0', transform: 'translateY(-8px)' });
           setTimeout(() => el.remove(), 320);
         }, 3500);
       }
     },
     args: [msg, type, vocabCount],
   }).catch(() => {});
-}
-
-async function updateRecord(recordId, patch) {
-  const { records = [] } = await chrome.storage.local.get(['records']);
-  const idx = records.findIndex((r) => r.id === recordId);
-  if (idx !== -1) {
-    records[idx] = { ...records[idx], ...patch };
-    await chrome.storage.local.set({ records });
-  }
 }
 
 // ── Prompt builder ─────────────────────────────────────────────
