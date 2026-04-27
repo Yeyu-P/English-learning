@@ -36,6 +36,7 @@ chrome.commands.onCommand.addListener(async (command) => {
 
 chrome.runtime.onMessage.addListener((msg, sender) => {
   if (msg.type !== 'subtract-float-capture') return false;
+  if (!sender.tab) return false;
   if (isCapturing) {
     sendFloatMsg(sender.tab.id, { type: 'subtract-float-status', status: 'error' });
     return false;
