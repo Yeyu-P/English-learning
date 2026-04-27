@@ -6,7 +6,6 @@ document.querySelectorAll('.tab').forEach((tab) => {
     document.querySelectorAll('.panel').forEach((p) => p.classList.remove('active'));
     tab.classList.add('active');
     document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
-    if (tab.dataset.tab === 'shortcut') loadCurrentShortcut();
   });
 });
 
@@ -147,139 +146,9 @@ chrome.storage.local.get(['apiKey', 'provider', 'model'], ({ apiKey, provider, m
 // TAB: SHORTCUT
 // ═══════════════════════════════════════════════════════════════
 
-const shortcutKeysEl   = document.getElementById('shortcutKeys');
-const modifyBtn        = document.getElementById('modifyBtn');
-const captureArea      = document.getElementById('captureArea');
-const captureHint      = document.getElementById('captureHint');
-const captureKeysEl    = document.getElementById('captureKeys');
-const captureActions   = document.getElementById('captureActions');
-const confirmShortcut  = document.getElementById('confirmShortcutBtn');
-const cancelShortcut   = document.getElementById('cancelShortcutBtn');
-const resetShortcut    = document.getElementById('resetShortcutBtn');
-const shortcutError    = document.getElementById('shortcutError');
-
-let isRecording    = false;
-let pendingShortcut = null;
-
-function renderKeys(shortcut, target) {
-  if (!shortcut) { target.textContent = '未设置'; return; }
-  target.innerHTML = shortcut
-    .split('+')
-    .map((k, i, arr) =>
-      `<kbd>${k}</kbd>${i < arr.length - 1 ? '<span class="key-sep"> + </span>' : ''}`
-    )
-    .join('');
-}
-
-async function loadCurrentShortcut() {
-  try {
-    const commands = await chrome.commands.getAll();
-    const cmd = commands.find((c) => c.name === 'capture-screenshot');
-    renderKeys(cmd?.shortcut || '', shortcutKeysEl);
-  } catch (_) {
-    shortcutKeysEl.textContent = '无法读取';
-  }
-}
-
-function startRecording() {
-  isRecording = true;
-  pendingShortcut = null;
-  shortcutError.textContent = '';
-  modifyBtn.style.display = 'none';
-  captureArea.style.display = 'flex';
-  captureArea.classList.remove('has-key');
-  captureActions.classList.remove('show');
-  captureHint.textContent = '点击此处，然后按下新快捷键';
-  captureKeysEl.innerHTML = '';
-  captureArea.focus();
-}
-
-function stopRecording() {
-  isRecording = false;
-  captureArea.style.display = 'none';
-  captureActions.classList.remove('show');
-  modifyBtn.style.display = '';
-}
-
-modifyBtn.addEventListener('click', startRecording);
-cancelShortcut.addEventListener('click', stopRecording);
-
-captureArea.addEventListener('click', () => {
-  if (!isRecording) return;
-  captureArea.focus();
-});
-
-captureArea.addEventListener('keydown', (e) => {
-  e.preventDefault();
-  if (!isRecording) return;
-
-  const mods = [];
-  if (e.ctrlKey || e.metaKey) mods.push('Ctrl');
-  if (e.altKey)   mods.push('Alt');
-  if (e.shiftKey) mods.push('Shift');
-
-  // Only modifiers pressed so far — show partial
-  if (['Control', 'Alt', 'Shift', 'Meta'].includes(e.key)) {
-    captureHint.textContent = mods.length ? '再按一个触发键…' : '按下快捷键组合…';
-    renderKeys(mods.length ? mods.join('+') + '+?' : '', captureKeysEl);
-    captureActions.classList.remove('show');
-    return;
-  }
-
-  const KEY_MAP = {
-    'ArrowUp': 'Up', 'ArrowDown': 'Down',
-    'ArrowLeft': 'Left', 'ArrowRight': 'Right',
-    'Delete': 'Delete', 'Home': 'Home', 'End': 'End',
-    'PageUp': 'PageUp', 'PageDown': 'PageDown',
-    'Insert': 'Insert', ' ': 'Space',
-  };
-
-  let key = e.key;
-  if (key.length === 1) {
-    key = key.toUpperCase();
-  } else if (KEY_MAP[key]) {
-    key = KEY_MAP[key];
-  } else if (/^F\d{1,2}$/.test(key)) {
-    // F1–F12 — keep as is
-  } else {
-    shortcutError.textContent = `不支持的按键 "${key}"，请使用字母、数字、F键或方向键`;
-    return;
-  }
-
-  if (mods.length === 0) {
-    shortcutError.textContent = '需要至少包含一个修饰键（Ctrl / Alt / Shift）';
-    return;
-  }
-
-  shortcutError.textContent = '';
-  pendingShortcut = [...mods, key].join('+');
-  captureArea.classList.add('has-key');
-  captureHint.textContent = '捕获到：';
-  renderKeys(pendingShortcut, captureKeysEl);
-  captureActions.classList.add('show');
-});
-
-confirmShortcut.addEventListener('click', async () => {
-  if (!pendingShortcut) return;
-  try {
-    await chrome.commands.update({ name: 'capture-screenshot', shortcut: pendingShortcut });
-    renderKeys(pendingShortcut, shortcutKeysEl);
-    stopRecording();
-    shortcutError.textContent = '';
-  } catch (err) {
-    shortcutError.textContent = '保存失败：' + (err.message || '快捷键可能与系统或其他应用冲突，请尝试其他组合');
-  }
-});
-
-resetShortcut.addEventListener('click', async () => {
-  try {
-    await chrome.commands.reset('capture-screenshot');
-    await loadCurrentShortcut();
-    stopRecording();
-    shortcutError.textContent = '';
-  } catch (err) {
-    shortcutError.textContent = '重置失败：' + err.message;
-  }
+document.getElementById('openShortcutsBtn').addEventListener('click', () => {
+  chrome.tabs.create({ url: 'chrome://extensions/shortcuts' });
+  window.close();
 });
 
 // ═══════════════════════════════════════════════════════════════
@@ -331,17 +200,19 @@ document.getElementById('savePrefsBtn').addEventListener('click', () => {
   const analysisLanguage = document.querySelector('#langCtrl .seg-btn.active').dataset.val;
   const analysisDetail   = document.querySelector('#detailCtrl .seg-btn.active').dataset.val;
   const maxRecords       = parseInt(document.getElementById('maxRecords').value, 10);
+  const floaterEnabled   = document.getElementById('floaterToggle').checked;
 
-  chrome.storage.local.set({ analysisLanguage, analysisDetail, maxRecords }, () => {
+  chrome.storage.local.set({ analysisLanguage, analysisDetail, maxRecords, floaterEnabled }, () => {
     showToast('toastPrefs', '保存成功 ✓', 'success');
   });
 });
 
 // Load saved prefs
-chrome.storage.local.get(['analysisLanguage', 'analysisDetail', 'maxRecords'], (s) => {
+chrome.storage.local.get(['analysisLanguage', 'analysisDetail', 'maxRecords', 'floaterEnabled'], (s) => {
   if (s.analysisLanguage) setSegCtrl('langCtrl', s.analysisLanguage);
   if (s.analysisDetail)   setSegCtrl('detailCtrl', s.analysisDetail);
   if (s.maxRecords != null) document.getElementById('maxRecords').value = s.maxRecords;
+  if (s.floaterEnabled != null) document.getElementById('floaterToggle').checked = s.floaterEnabled;
 });
 
 // ═══════════════════════════════════════════════════════════════

@@ -441,49 +441,33 @@
 
   <!-- ── Tab: Shortcuts ── -->
   <div class="panel" id="tab-shortcut">
-
-    <!-- Full screen shortcut (editable via recorder) -->
     <div class="field">
-      <div class="field-label">Full screen capture</div>
+      <div class="field-label">Keyboard shortcuts</div>
 
-      <div class="shortcut-display" id="shortcutDisplay">
-        <div class="shortcut-keys" id="shortcutKeys">Loading…</div>
-        <button class="btn-modify" id="modifyBtn">Edit</button>
+      <div class="shortcut-static" style="margin-bottom:8px">
+        <div class="shortcut-static-info">
+          <div class="shortcut-static-name">Full screen capture</div>
+          <div class="shortcut-static-desc">Default: ⌘⇧E / Ctrl+Shift+E</div>
+        </div>
+        <div class="shortcut-static-keys">
+          <kbd>⌘</kbd><span class="key-sep">+</span><kbd>⇧</kbd><span class="key-sep">+</span><kbd>E</kbd>
+        </div>
       </div>
 
-      <div class="capture-area" id="captureArea" tabindex="0">
-        <div class="capture-hint" id="captureHint">Click here, then press a new shortcut</div>
-        <div class="capture-keys" id="captureKeys"></div>
-      </div>
-
-      <div class="capture-actions" id="captureActions">
-        <button class="btn-confirm" id="confirmShortcutBtn">Save</button>
-        <button class="btn-cancel"  id="cancelShortcutBtn">Cancel</button>
-        <button class="btn-cancel"  id="resetShortcutBtn">Reset default</button>
-      </div>
-
-      <div class="shortcut-error" id="shortcutError"></div>
-    </div>
-
-    <!-- Area selection shortcut (static display) -->
-    <div class="field">
-      <div class="field-label">Area selection capture <span class="tag-rec">new</span></div>
       <div class="shortcut-static">
         <div class="shortcut-static-info">
-          <div class="shortcut-static-name">Draw a selection on screen</div>
+          <div class="shortcut-static-name">Area selection capture</div>
           <div class="shortcut-static-desc">Default: ⌘⇧S / Ctrl+Shift+S</div>
         </div>
         <div class="shortcut-static-keys">
           <kbd>⌘</kbd><span class="key-sep">+</span><kbd>⇧</kbd><span class="key-sep">+</span><kbd>S</kbd>
         </div>
       </div>
-      <div class="field-desc">To change this shortcut, visit <strong>chrome://extensions/shortcuts</strong></div>
     </div>
 
-    <div class="shortcut-note">
-      <strong>Modifier keys:</strong> Ctrl, Alt, Shift (Ctrl = ⌘ on Mac)<br>
-      <strong>Trigger key:</strong> Letter, number, F1–F12, arrow keys<br>
-      <strong>Default full-screen:</strong> Ctrl+Shift+E
+    <button class="btn-save" id="openShortcutsBtn" style="margin-top:8px">Customize shortcuts →</button>
+    <div class="field-desc" style="text-align:center;margin-top:8px">
+      Chrome requires shortcuts to be set in the extensions page
     </div>
   </div>
 
@@ -555,6 +539,19 @@
         <option value="0">Unlimited</option>
       </select>
       <div class="field-desc">Oldest records are removed when limit is exceeded</div>
+    </div>
+
+    <div class="field">
+      <div class="toggle-row">
+        <div class="toggle-row-text">
+          <div class="toggle-row-title">Floating capture button</div>
+          <div class="toggle-row-sub">Show on all pages for click-to-capture</div>
+        </div>
+        <label class="switch">
+          <input type="checkbox" id="floaterToggle" checked>
+          <span class="slider"></span>
+        </label>
+      </div>
     </div>
 
     <button class="btn-save" id="savePrefsBtn">Save preferences</button>
