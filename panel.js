@@ -240,6 +240,7 @@ function renderExportModal(records, prefs) {
   function syncNotes() {
     notesCb.disabled = !vocabCb.checked;
     notesCb.closest('label').style.opacity = vocabCb.checked ? '1' : '0.4';
+    if (!vocabCb.checked) notesCb.checked = false;
   }
   syncNotes();
   vocabCb.addEventListener('change', syncNotes);
