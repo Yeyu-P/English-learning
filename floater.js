@@ -329,18 +329,22 @@
 
       center.appendChild(blFull);
       center.appendChild(blArea);
-      center.addEventListener('mouseenter', () => {
+      function showThrough() {
         bar.style.background = 'rgba(26,22,19,0)';
         bar.style.borderColor = 'rgba(248,245,240,0)';
         bar.style.backdropFilter = 'none';
         bar.style.webkitBackdropFilter = 'none';
-      });
-      center.addEventListener('mouseleave', () => {
+      }
+      function hideThrough() {
         bar.style.background = '';
         bar.style.borderColor = '';
         bar.style.backdropFilter = '';
         bar.style.webkitBackdropFilter = '';
-      });
+      }
+      blFull.addEventListener('mouseenter', showThrough);
+      blFull.addEventListener('mouseleave', hideThrough);
+      blArea.addEventListener('mouseenter', showThrough);
+      blArea.addEventListener('mouseleave', hideThrough);
 
       // Close button
       const closeBtn = document.createElement('div');
