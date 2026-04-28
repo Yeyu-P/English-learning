@@ -178,6 +178,16 @@
       }
     });
 
+    // ── Fullscreen: move floater into/out of fullscreen element
+    document.addEventListener('fullscreenchange', () => {
+      const fs = document.fullscreenElement;
+      if (fs) {
+        fs.appendChild(floater);
+      } else {
+        document.documentElement.appendChild(floater);
+      }
+    });
+
     // ── Status icon
     function setStatus(status) {
       if (status === 'loading') {
