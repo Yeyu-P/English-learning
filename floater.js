@@ -162,10 +162,12 @@
 
     const actions = document.createElement('div');
     actions.className = '__sb-actions';
-    const btnFull = makeBtn(ICON_FULL, 'Full screen');
-    const btnArea = makeBtn(ICON_AREA, 'Select area');
+    const btnFull  = makeBtn(ICON_FULL,  'Full screen');
+    const btnArea  = makeBtn(ICON_AREA,  'Select area');
+    const btnBlock = makeBtn(ICON_BLOCK, 'Block subtitles');
     actions.appendChild(btnFull);
     actions.appendChild(btnArea);
+    actions.appendChild(btnBlock);
 
     const main = document.createElement('div');
     main.className = '__sb-main';
@@ -192,6 +194,11 @@
       try {
         chrome.runtime.sendMessage({ type: 'subtract-float-capture', mode: 'area' });
       } catch (_) { floater.style.display = ''; setStatus('error'); setTimeout(() => setStatus('idle'), 2000); }
+    });
+
+    btnBlock.addEventListener('click', (e) => {
+      e.stopPropagation();
+      createBlocker();
     });
 
     // ── Background messages
