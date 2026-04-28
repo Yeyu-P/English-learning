@@ -112,15 +112,19 @@
     btnFull.addEventListener('click', (e) => {
       e.stopPropagation();
       setStatus('loading');
-      chrome.runtime.sendMessage({ type: 'subtract-float-capture', mode: 'full' }, () => {
-        if (chrome.runtime.lastError) setStatus('error');
-      });
+      try {
+        chrome.runtime.sendMessage({ type: 'subtract-float-capture', mode: 'full' }, () => {
+          if (chrome.runtime.lastError) setStatus('error');
+        });
+      } catch (_) { floater.remove(); }
     });
 
     btnArea.addEventListener('click', (e) => {
       e.stopPropagation();
       floater.style.display = 'none';
-      chrome.runtime.sendMessage({ type: 'subtract-float-capture', mode: 'area' });
+      try {
+        chrome.runtime.sendMessage({ type: 'subtract-float-capture', mode: 'area' });
+      } catch (_) { floater.remove(); }
     });
 
     // ── Background messages
@@ -136,7 +140,7 @@
         }
       }
     }
-    chrome.runtime.onMessage.addListener(onExtMsg);
+    try { chrome.runtime.onMessage.addListener(onExtMsg); } catch (_) { floater.remove(); return; }
 
     // ── Drag to reposition (drag vs click: only reposition if moved > 4px)
     let dragging = false, moved = false;
