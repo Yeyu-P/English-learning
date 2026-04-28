@@ -212,6 +212,13 @@
         setStatus('idle');
       }
       if (msg.type === 'subtract-float-status') {
+        if (blockerEl) {
+          if (msg.status === 'done') blockerEl.style.borderColor = 'rgba(90,122,98,0.7)';
+          else if (msg.status === 'error' || msg.status === 'cancelled') blockerEl.style.borderColor = 'rgba(179,90,90,0.7)';
+          if (msg.status === 'done' || msg.status === 'error' || msg.status === 'cancelled') {
+            setTimeout(() => { if (blockerEl) blockerEl.style.borderColor = ''; }, 2000);
+          }
+        }
         setStatus(msg.status);
         if (msg.status === 'done' || msg.status === 'error' || msg.status === 'cancelled') {
           setTimeout(() => setStatus('idle'), 2000);
@@ -299,11 +306,12 @@
       const blFull = makeBlockerBtn(ICON_FULL, 'Full screen');
       blFull.addEventListener('click', (e) => {
         e.stopPropagation();
+        bar.style.borderColor = 'rgba(200,113,58,0.7)';
         try {
           chrome.runtime.sendMessage({ type: 'subtract-float-capture', mode: 'full' }, () => {
-            void chrome.runtime.lastError;
+            if (chrome.runtime.lastError) bar.style.borderColor = 'rgba(179,90,90,0.7)';
           });
-        } catch (_) {}
+        } catch (_) { bar.style.borderColor = 'rgba(179,90,90,0.7)'; }
       });
 
       const blArea = makeBlockerBtn(ICON_AREA, 'Select area');
