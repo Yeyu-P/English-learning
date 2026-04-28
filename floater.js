@@ -116,7 +116,7 @@
         chrome.runtime.sendMessage({ type: 'subtract-float-capture', mode: 'full' }, () => {
           if (chrome.runtime.lastError) setStatus('error');
         });
-      } catch (_) { floater.remove(); }
+      } catch (_) { setStatus('error'); setTimeout(() => setStatus('idle'), 2000); }
     });
 
     btnArea.addEventListener('click', (e) => {
@@ -124,7 +124,7 @@
       floater.style.display = 'none';
       try {
         chrome.runtime.sendMessage({ type: 'subtract-float-capture', mode: 'area' });
-      } catch (_) { floater.remove(); }
+      } catch (_) { floater.style.display = ''; setStatus('error'); setTimeout(() => setStatus('idle'), 2000); }
     });
 
     // ── Background messages
@@ -140,7 +140,7 @@
         }
       }
     }
-    try { chrome.runtime.onMessage.addListener(onExtMsg); } catch (_) { floater.remove(); return; }
+    try { chrome.runtime.onMessage.addListener(onExtMsg); } catch (_) { /* context already gone, floater stays but won't receive messages */ }
 
     // ── Drag to reposition (drag vs click: only reposition if moved > 4px)
     let dragging = false, moved = false;
