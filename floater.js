@@ -266,6 +266,153 @@
       }
     });
 
+    // ── Subtitle blocker bar
+    let blockerEl = null;
+
+    function createBlocker() {
+      if (blockerEl) return;
+      floater.style.display = 'none';
+
+      const initW = Math.round(window.innerWidth * 0.6);
+      const initL = Math.round((window.innerWidth - initW) / 2);
+      const initB = 80;
+
+      const bar = document.createElement('div');
+      bar.id = '__subtract-blocker__';
+      bar.style.left   = initL + 'px';
+      bar.style.bottom = initB + 'px';
+      bar.style.width  = initW + 'px';
+
+      // Eye button
+      const eyeBtn = document.createElement('div');
+      eyeBtn.className = '__sb-bl-eye';
+      eyeBtn.title = 'Hover to peek';
+      eyeBtn.innerHTML = ICON_EYE;
+      eyeBtn.addEventListener('mouseenter', () => { bar.style.opacity = '0.08'; });
+      eyeBtn.addEventListener('mouseleave', () => { bar.style.opacity = ''; });
+
+      // Center capture buttons
+      const center = document.createElement('div');
+      center.className = '__sb-bl-center';
+
+      const blFull = makeBlockerBtn(ICON_FULL, 'Full screen');
+      blFull.addEventListener('click', (e) => {
+        e.stopPropagation();
+        try {
+          chrome.runtime.sendMessage({ type: 'subtract-float-capture', mode: 'full' }, () => {
+            void chrome.runtime.lastError;
+          });
+        } catch (_) {}
+      });
+
+      const blArea = makeBlockerBtn(ICON_AREA, 'Select area');
+      blArea.addEventListener('click', (e) => {
+        e.stopPropagation();
+        bar.style.display = 'none';
+        try {
+          chrome.runtime.sendMessage({ type: 'subtract-float-capture', mode: 'area' });
+        } catch (_) { bar.style.display = ''; }
+      });
+
+      center.appendChild(blFull);
+      center.appendChild(blArea);
+
+      // Close button
+      const closeBtn = document.createElement('div');
+      closeBtn.className = '__sb-bl-close';
+      closeBtn.title = 'Exit blocker';
+      closeBtn.innerHTML = ICON_X;
+      closeBtn.addEventListener('click', (e) => { e.stopPropagation(); destroyBlocker(); });
+
+      // Resize handles
+      const resizeL = document.createElement('div');
+      resizeL.className = '__sb-bl-resize-l';
+      const resizeR = document.createElement('div');
+      resizeR.className = '__sb-bl-resize-r';
+
+      bar.appendChild(resizeL);
+      bar.appendChild(eyeBtn);
+      bar.appendChild(center);
+      bar.appendChild(closeBtn);
+      bar.appendChild(resizeR);
+
+      // ── Drag bar
+      let bDragging = false, rDragging = false, rSide = null;
+      let startX, startY, startL, startB, startW;
+
+      bar.addEventListener('mousedown', (e) => {
+        if (e.button !== 0) return;
+        if (e.target === resizeL || e.target === resizeR) return;
+        if (eyeBtn.contains(e.target) || closeBtn.contains(e.target) || center.contains(e.target)) return;
+        bDragging = true;
+        startX = e.clientX; startY = e.clientY;
+        startL = parseInt(bar.style.left)   || initL;
+        startB = parseInt(bar.style.bottom) || initB;
+        bar.style.cursor = 'grabbing';
+        e.preventDefault();
+      });
+
+      // ── Resize handles
+      function onResizeDown(side, e) {
+        if (e.button !== 0) return;
+        rDragging = true; rSide = side;
+        startX = e.clientX;
+        startL = parseInt(bar.style.left)  || initL;
+        startW = parseInt(bar.style.width) || initW;
+        e.preventDefault();
+        e.stopPropagation();
+      }
+      resizeL.addEventListener('mousedown', (e) => onResizeDown('left',  e));
+      resizeR.addEventListener('mousedown', (e) => onResizeDown('right', e));
+
+      function onBMove(e) {
+        if (bDragging) {
+          const dx = e.clientX - startX;
+          const dy = e.clientY - startY;
+          const w  = parseInt(bar.style.width) || initW;
+          bar.style.left   = Math.max(0, Math.min(window.innerWidth  - w,  startL + dx)) + 'px';
+          bar.style.bottom = Math.max(0, Math.min(window.innerHeight - 64, startB - dy)) + 'px';
+        }
+        if (rDragging) {
+          const dx  = e.clientX - startX;
+          const minW = 140;
+          if (rSide === 'right') {
+            const newW = Math.max(minW, Math.min(window.innerWidth, startW + dx));
+            bar.style.width = newW + 'px';
+          } else {
+            const newW = Math.max(minW, Math.min(startW + startL, startW - dx));
+            bar.style.left  = Math.max(0, startL + startW - newW) + 'px';
+            bar.style.width = newW + 'px';
+          }
+        }
+      }
+
+      function onBUp() {
+        bDragging = false; rDragging = false; rSide = null;
+        bar.style.cursor = 'grab';
+      }
+
+      document.addEventListener('mousemove', onBMove);
+      document.addEventListener('mouseup',   onBUp);
+
+      bar.__sbCleanup = () => {
+        document.removeEventListener('mousemove', onBMove);
+        document.removeEventListener('mouseup',   onBUp);
+      };
+
+      const container = document.fullscreenElement || document.documentElement;
+      container.appendChild(bar);
+      blockerEl = bar;
+    }
+
+    function destroyBlocker() {
+      if (!blockerEl) return;
+      if (blockerEl.__sbCleanup) blockerEl.__sbCleanup();
+      blockerEl.remove();
+      blockerEl = null;
+      floater.style.display = '';
+    }
+
     // ── Status icon
     function setStatus(status) {
       if (status === 'loading') {
@@ -284,6 +431,13 @@
     const btn = document.createElement('div');
     btn.className = '__sb-action';
     btn.innerHTML = `${iconSvg}<span class="__sb-tip">${tooltip}</span>`;
+    return btn;
+  }
+
+  function makeBlockerBtn(iconSvg, tooltip) {
+    const btn = document.createElement('div');
+    btn.className = '__sb-bl-btn';
+    btn.innerHTML = `${iconSvg}<span class="__sb-bl-tip">${tooltip}</span>`;
     return btn;
   }
 })();
