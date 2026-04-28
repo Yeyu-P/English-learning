@@ -23,6 +23,17 @@
   const ICON_X = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#b35a5a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`;
   const ICON_SPIN = `<div style="width:14px;height:14px;border:2px solid rgba(248,245,240,0.25);border-top-color:#c8713a;border-radius:50%;animation:__sb_spin 0.75s linear infinite;flex-shrink:0"></div>`;
 
+  const ICON_BLOCK = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f8f5f0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="1" y="9" width="22" height="6" rx="1.5"/>
+    <line x1="5" y1="12" x2="9" y2="12"/>
+    <line x1="12" y1="12" x2="19" y2="12"/>
+  </svg>`;
+
+  const ICON_EYE = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f8f5f0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+    <circle cx="12" cy="12" r="3"/>
+  </svg>`;
+
   chrome.storage.local.get(['floaterEnabled', 'floaterPos'], ({ floaterEnabled, floaterPos }) => {
     if (floaterEnabled === false) return;
     createFloater(floaterPos || { right: 20, bottom: 20 });
