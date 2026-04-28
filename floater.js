@@ -288,7 +288,7 @@
       eyeBtn.className = '__sb-bl-eye';
       eyeBtn.title = 'Hover to peek';
       eyeBtn.innerHTML = ICON_EYE;
-      eyeBtn.addEventListener('mouseenter', () => { bar.style.opacity = '0.08'; });
+      eyeBtn.addEventListener('mouseenter', () => { if (!bDragging) bar.style.opacity = '0.08'; });
       eyeBtn.addEventListener('mouseleave', () => { bar.style.opacity = ''; });
 
       // Center capture buttons
@@ -377,7 +377,7 @@
           const dx  = e.clientX - startX;
           const minW = 140;
           if (rSide === 'right') {
-            const newW = Math.max(minW, Math.min(window.innerWidth, startW + dx));
+            const newW = Math.max(minW, Math.min(window.innerWidth - startL, startW + dx));
             bar.style.width = newW + 'px';
           } else {
             const newW = Math.max(minW, Math.min(startW + startL, startW - dx));
