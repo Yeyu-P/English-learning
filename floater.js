@@ -204,7 +204,11 @@
     // ── Background messages
     function onExtMsg(msg) {
       if (msg.type === 'subtract-float-restore') {
-        floater.style.display = '';
+        if (blockerEl) {
+          blockerEl.style.display = '';
+        } else {
+          floater.style.display = '';
+        }
         setStatus('idle');
       }
       if (msg.type === 'subtract-float-status') {
@@ -256,14 +260,11 @@
       }
     });
 
-    // ── Fullscreen: move floater into/out of fullscreen element
+    // ── Fullscreen: move floater/blocker into/out of fullscreen element
     document.addEventListener('fullscreenchange', () => {
-      const fs = document.fullscreenElement;
-      if (fs) {
-        fs.appendChild(floater);
-      } else {
-        document.documentElement.appendChild(floater);
-      }
+      const container = document.fullscreenElement || document.documentElement;
+      container.appendChild(floater);
+      if (blockerEl) container.appendChild(blockerEl);
     });
 
     // ── Subtitle blocker bar
