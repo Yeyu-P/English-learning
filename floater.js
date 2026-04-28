@@ -94,6 +94,62 @@
           opacity: 0; transition: opacity 0.1s;
         }
         .__sb-action:hover .__sb-tip { opacity: 1; }
+
+        /* ── Blocker bar */
+        #__subtract-blocker__ {
+          position: fixed; z-index: 2147483646;
+          height: 64px;
+          background: rgba(26,22,19,0.82);
+          border: 1.5px solid rgba(248,245,240,0.18);
+          border-radius: 12px;
+          display: flex; align-items: center; justify-content: space-between;
+          padding: 0 16px;
+          cursor: grab;
+          user-select: none;
+          transition: opacity 0.2s;
+          backdrop-filter: blur(8px);
+          -webkit-backdrop-filter: blur(8px);
+          box-sizing: border-box;
+        }
+        .__sb-bl-resize-l, .__sb-bl-resize-r {
+          position: absolute; top: 0; bottom: 0; width: 10px;
+          cursor: ew-resize; z-index: 1;
+        }
+        .__sb-bl-resize-l { left: 0; border-radius: 12px 0 0 12px; }
+        .__sb-bl-resize-r { right: 0; border-radius: 0 12px 12px 0; }
+        .__sb-bl-eye, .__sb-bl-close {
+          width: 30px; height: 30px; border-radius: 50%;
+          display: flex; align-items: center; justify-content: center;
+          cursor: pointer; flex-shrink: 0;
+          background: rgba(248,245,240,0.08);
+          border: 1px solid rgba(248,245,240,0.12);
+          transition: background 0.15s;
+        }
+        .__sb-bl-eye:hover { background: rgba(248,245,240,0.20); }
+        .__sb-bl-close:hover { background: rgba(179,90,90,0.55); }
+        .__sb-bl-center {
+          display: flex; align-items: center; gap: 12px;
+          flex: 1; justify-content: center;
+        }
+        .__sb-bl-btn {
+          position: relative;
+          width: 36px; height: 36px; border-radius: 50%;
+          background: rgba(248,245,240,0.10);
+          border: 1.5px solid rgba(248,245,240,0.18);
+          display: flex; align-items: center; justify-content: center;
+          cursor: pointer;
+          transition: background 0.15s;
+        }
+        .__sb-bl-btn:hover { background: rgba(200,113,58,0.85); }
+        .__sb-bl-tip {
+          position: absolute; bottom: 44px;
+          background: rgba(26,22,19,0.85); color: #f8f5f0;
+          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+          font-size: 11px; padding: 3px 8px; border-radius: 4px;
+          white-space: nowrap; pointer-events: none;
+          opacity: 0; transition: opacity 0.1s;
+        }
+        .__sb-bl-btn:hover .__sb-bl-tip { opacity: 1; }
       `;
       document.head.appendChild(s);
     }
