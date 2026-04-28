@@ -117,6 +117,10 @@
         }
         .__sb-bl-resize-l { left: 0; border-radius: 12px 0 0 12px; }
         .__sb-bl-resize-r { right: 0; border-radius: 0 12px 12px 0; }
+        .__sb-bl-resize-t {
+          position: absolute; top: 0; left: 10px; right: 10px; height: 8px;
+          cursor: ns-resize; z-index: 2;
+        }
         .__sb-bl-eye, .__sb-bl-close {
           width: 30px; height: 30px; border-radius: 50%;
           display: flex; align-items: center; justify-content: center;
@@ -325,6 +329,8 @@
 
       center.appendChild(blFull);
       center.appendChild(blArea);
+      center.addEventListener('mouseenter', () => { bar.style.opacity = '0'; });
+      center.addEventListener('mouseleave', () => { bar.style.opacity = ''; });
 
       // Close button
       const closeBtn = document.createElement('div');
@@ -338,26 +344,29 @@
       resizeL.className = '__sb-bl-resize-l';
       const resizeR = document.createElement('div');
       resizeR.className = '__sb-bl-resize-r';
+      const resizeT = document.createElement('div');
+      resizeT.className = '__sb-bl-resize-t';
 
       bar.appendChild(resizeL);
+      bar.appendChild(resizeT);
       bar.appendChild(eyeBtn);
       bar.appendChild(center);
       bar.appendChild(closeBtn);
       bar.appendChild(resizeR);
 
       // ── Drag bar
-      let bDragging = false, rDragging = false, rSide = null;
-      let startX, startY, startL, startB, startW;
+      let bDragging = false, bMoved = false, rDragging = false, rSide = null;
+      let startX, startY, startL, startB, startW, startH;
 
       bar.addEventListener('mousedown', (e) => {
         if (e.button !== 0) return;
-        if (e.target === resizeL || e.target === resizeR) return;
-        if (eyeBtn.contains(e.target) || closeBtn.contains(e.target) || center.contains(e.target)) return;
+        // resize handles stop their own propagation; exclude them as a safety net
+        if (e.target === resizeL || e.target === resizeR || e.target === resizeT) return;
         bDragging = true;
+        bMoved = false;
         startX = e.clientX; startY = e.clientY;
         startL = parseInt(bar.style.left)   || initL;
         startB = parseInt(bar.style.bottom) || initB;
-        bar.style.cursor = 'grabbing';
         e.preventDefault();
       });
 
@@ -366,38 +375,49 @@
         if (e.button !== 0) return;
         rDragging = true; rSide = side;
         startX = e.clientX;
+        startY = e.clientY;
         startL = parseInt(bar.style.left)  || initL;
         startW = parseInt(bar.style.width) || initW;
+        startH = bar.offsetHeight          || 64;
         e.preventDefault();
         e.stopPropagation();
       }
       resizeL.addEventListener('mousedown', (e) => onResizeDown('left',  e));
       resizeR.addEventListener('mousedown', (e) => onResizeDown('right', e));
+      resizeT.addEventListener('mousedown', (e) => onResizeDown('top',   e));
 
       function onBMove(e) {
         if (bDragging) {
           const dx = e.clientX - startX;
           const dy = e.clientY - startY;
-          const w  = parseInt(bar.style.width) || initW;
-          bar.style.left   = Math.max(0, Math.min(window.innerWidth  - w,  startL + dx)) + 'px';
-          bar.style.bottom = Math.max(0, Math.min(window.innerHeight - 64, startB - dy)) + 'px';
+          if (!bMoved && Math.abs(dx) < 4 && Math.abs(dy) < 4) return;
+          if (!bMoved) { bMoved = true; bar.style.cursor = 'grabbing'; }
+          const h = bar.offsetHeight || 64;
+          const w = parseInt(bar.style.width) || initW;
+          bar.style.left   = Math.max(0, Math.min(window.innerWidth  - w, startL + dx)) + 'px';
+          bar.style.bottom = Math.max(0, Math.min(window.innerHeight - h, startB - dy)) + 'px';
         }
         if (rDragging) {
           const dx  = e.clientX - startX;
-          const minW = 140;
+          const dy  = e.clientY - startY;
+          const minW = 140, minH = 32;
           if (rSide === 'right') {
             const newW = Math.max(minW, Math.min(window.innerWidth - startL, startW + dx));
             bar.style.width = newW + 'px';
-          } else {
+          } else if (rSide === 'left') {
             const newW = Math.max(minW, Math.min(startW + startL, startW - dx));
             bar.style.left  = Math.max(0, startL + startW - newW) + 'px';
             bar.style.width = newW + 'px';
+          } else if (rSide === 'top') {
+            // drag top edge up → bar grows taller (bottom fixed)
+            const newH = Math.max(minH, startH - dy);
+            bar.style.height = newH + 'px';
           }
         }
       }
 
       function onBUp() {
-        bDragging = false; rDragging = false; rSide = null;
+        bDragging = false; bMoved = false; rDragging = false; rSide = null;
         bar.style.cursor = 'grab';
       }
 
