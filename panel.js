@@ -306,9 +306,11 @@ function buildMarkdown(records, prefs) {
     const source = r.tabTitle || 'Unknown';
     const time   = r.timestamp ? new Date(r.timestamp).toLocaleString() : '';
 
-    md += `---\n\n## ${escapeMd(source)}`;
-    if (prefs.includeTime && time) md += ` · ${time}`;
-    md += '\n\n';
+    let headerParts = [];
+    if (prefs.includeSource) headerParts.push(escapeMd(source));
+    if (prefs.includeTime && time) headerParts.push(time);
+
+    md += `---\n\n## ${headerParts.join(' · ')}\n\n`;
 
     if (prefs.includeDialogues && r.analysis?.dialogues?.length) {
       md += `### Dialogues\n\n`;
@@ -322,7 +324,9 @@ function buildMarkdown(records, prefs) {
       md += `### Vocabulary\n\n`;
       r.analysis.vocabulary.forEach((v) => {
         let line = `- **${escapeMd(v.word || '')}** — ${escapeMd(v.meaning || '')}`;
-        if (prefs.includeVocabNotes && v.note) line += ` *(${escapeMd(v.note)})*`;
+        if (prefs.includeVocabNotes && v.note) {
+          line += ` *(${escapeMd(v.note)})*`;
+        }
         md += line + '\n';
       });
       md += '\n';
